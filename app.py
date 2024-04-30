@@ -35,25 +35,13 @@ def callback():
     return "OK"
 
 @handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    user_message = event.message.text
-
-    # ChatGPTからの返信を取得
-    response = openai.Completion.create(
-        engine="text-davinci-002",
-        prompt=f"{user_message}\nAI:",
-        max_tokens=150,
-        n=1,
-        stop=None,
-        temperature=0.7,
-    )
-
-    chatgpt_reply = response.choices[0].text.strip()
-
+def echo_message(event):
+    text = event.message.text  # 受け取ったメッセージのテキストを取得
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=chatgpt_reply)
+        TextSendMessage(text=text)  # 受け取ったテキストをそのまま返信
     )
+
 
 if __name__ == "__main__":
     app.run()
