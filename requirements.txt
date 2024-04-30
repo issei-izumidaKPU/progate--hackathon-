@@ -1,5 +1,5 @@
-openai==1.24.0
-flask
-line-bot-sdk
 python-dotenv
 gunicorn
+Flask==3.0.0
+line-bot-sdk==3.7.0
+openai==0.28.0

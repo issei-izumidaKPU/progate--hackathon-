@@ -36,13 +36,22 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    user_message = event.message.text
+    user_message = event.message.text  # ユーザーからのメッセージを取得
 
-    # ユーザーからのメッセージをそのまま返信する
+    # OpenAI APIを使用してレスポンスを生成
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # モデルの指定
+        messages=[{"role": "system", "content": "You are an assistant skilled in programming, general knowledge, and tool usage advice. You provide helpful information for tasks in Line.And You must return messages in japanese."},  # システムメッセージの設定
+                  {"role": "user", "content": user_message}],  # ユーザーメッセー
+        max_tokens=250          # 生成するトークンの最大数
+    )
+
+    # LINEユーザーにレスポンスを返信
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=user_message)
+        TextSendMessage(text=response.choices[0].message['content'].strip())  # 正しいレスポンスの取得方法
     )
+
 
 
 if __name__ == "__main__":
