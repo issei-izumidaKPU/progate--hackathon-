@@ -39,7 +39,7 @@ def handle_message(event):
     user_message = event.message.text
 
     response = openai.ChatCompletion.create(
-        model="gpt-3.5",  # モデルの名前は引き続きここで指定します
+        model="gpt-3.5-turbo",  # モデルの名前は引き続きここで指定します
         messages=[{"role": "user", "content": user_message}],
         max_tokens=150,
         temperature=0.7,
