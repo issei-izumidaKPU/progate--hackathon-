@@ -38,17 +38,17 @@ def callback():
 def handle_message(event):
     user_message = event.message.text
 
-    response = openai.Completion.create(
-        engine="text-davinci-002",
-        prompt=f"{user_message}\nAI:",
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5",  # モデルの名前は引き続きここで指定します
+        messages=[{"role": "user", "content": user_message}],
         max_tokens=150,
-        n=1,
-        stop=None,
         temperature=0.7,
     )
 
-    chatgpt_reply = response.choices[0].text.strip()
+    # 新しいAPIのレスポンス構造に基づいて回答を抽出
+    chatgpt_reply = response['choices'][0]['message']['content'].strip()
 
+    # LINE Bot APIを使用してメッセージを返信
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=chatgpt_reply)
