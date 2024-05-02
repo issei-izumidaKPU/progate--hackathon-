@@ -4,8 +4,8 @@ from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
-from google.cloud import storage
-from google.oauth2 import service_account
+#from google.cloud import storage
+#from google.oauth2 import service_account
 
 app = Flask(__name__)
 from dotenv import load_dotenv
@@ -59,8 +59,8 @@ def handle_message(event):
     res = f"あなたのユーザーIDは{user_id}です。\n"
     res += response.choices[0].message['content'].strip()
     # ユーザーのIDとメッセージをGoogle Cloud Storageに保存
-    blob = bucket.blob(f"{user_id}/{user_message}.txt")
-    blob.upload_from_string(res)
+   # blob = bucket.blob(f"{user_id}/{user_message}.txt")
+    #blob.upload_from_string(res)
     # LINEユーザーにレスポンスを返信
     line_bot_api.reply_message(
         event.reply_token,
