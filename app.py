@@ -19,13 +19,13 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 openai.api_key = OPENAI_API_KEY
 # Google Cloud Storageの設定
-GCS_BUCKET_NAME = 'YOUR_BUCKET_NAME'
-GCS_CREDENTIALS_FILE = 'path/to/your/credentials.json'
-credentials = service_account.Credentials.from_service_account_file(
-    GCS_CREDENTIALS_FILE
-)
-storage_client = storage.Client(credentials=credentials, project=credentials.project_id)
-bucket = storage_client.bucket(GCS_BUCKET_NAME)
+#GCS_BUCKET_NAME = 'YOUR_BUCKET_NAME'
+#GCS_CREDENTIALS_FILE = 'path/to/your/credentials.json'
+#credentials = service_account.Credentials.from_service_account_file(
+#    GCS_CREDENTIALS_FILE
+#)
+#storage_client = storage.Client(credentials=credentials, project=credentials.project_id)
+#bucket = storage_client.bucket(GCS_BUCKET_NAME)
 
 @app.route("/")
 def hello_world():
