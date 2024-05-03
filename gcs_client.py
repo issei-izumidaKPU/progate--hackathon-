@@ -34,11 +34,6 @@ class CloudStorageManager:
                 return "バケットが見つかりません。"
         except Exception as e:
             return f"GCSとの接続に失敗しました: {e}"
-    
-    def ensure_bucket(self):
-        """バケットが存在しない場合は新規作成する"""
-        if not self.client.lookup_bucket(self.bucket.name):
-            self.client.create_bucket(self.bucket)
         
     def upload_file(self, file_path, content, content_type='text/plain'):
         """指定したパスにファイルをアップロードする"""
