@@ -53,3 +53,10 @@ curl -v -X POST https://api.line.me/v2/bot/richmenu \
     ]
 }'
 
+curl -v -X POST https://api-data.line.me/v2/bot/richmenu/{richmenu-abf4ac1639ab243bbf6b72b36e0b7f82}/content \
+-H "Authorization: Bearer {G/GWajx/dWCMiTnd8NYQuthmw9MZxenLJHOfJys515rjFaYy32FuA1GZQY3TRFh2XCRB3987ekmDBHmfv4StheSuWQKtzIHKR4feBbUQ6AYO6CWgnDpm3Ce8iWkbHnfmRA4c0WpQd/yL8k0nmU2a3AdB04t89/1O/w1cDnyilFU=}" \
+-H "Content-Type: image/png" \
+-T richmenu-template-guide-04.png
+
+curl -v -X POST https://api.line.me/v2/bot/user/all/richmenu/{richmenu-abf4ac1639ab243bbf6b72b36e0b7f82} \
+-H "Authorization: Bearer {G/GWajx/dWCMiTnd8NYQuthmw9MZxenLJHOfJys515rjFaYy32FuA1GZQY3TRFh2XCRB3987ekmDBHmfv4StheSuWQKtzIHKR4feBbUQ6AYO6CWgnDpm3Ce8iWkbHnfmRA4c0WpQd/yL8k0nmU2a3AdB04t89/1O/w1cDnyilFU=}"

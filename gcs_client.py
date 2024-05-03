@@ -60,16 +60,15 @@ class CloudStorageManager:
         """新しいユーザーのストレージを初期化する"""
         # ユーザー専用のフォルダを作成
         user_folder = f"{user_id}/"
-        user_history_folder = f"{user_folder}history/"
         user_images_folder = f"{user_folder}images/"
         user_audio_folder = f"{user_folder}audio/"
-        folders = [user_history_folder, user_images_folder, user_audio_folder]
+        folders = [user_images_folder, user_audio_folder]
         
         for folder in folders:
             self.create_folder(folder)  # 各フォルダを作成
         
         # 初期の会話履歴ファイルを作成
-        history_file_path = f"{user_history_folder}interaction_history.txt"
+        history_file_path = f"{user_id}history.txt"
         initial_history_content = "ユーザーとのインタラクション履歴:\n"
         self.upload_file(history_file_path, initial_history_content)
 
@@ -77,3 +76,16 @@ class CloudStorageManager:
         """ユーザーの会話履歴を取得する。返り値は文字列です。"""
         history_file_path = f"{user_id}/history/interaction_history.txt"
         return self.download_file(history_file_path)
+    
+    def ensure_user_folder(self,user_id):
+        user_folder = f"{user_id}/"
+        user_images_folder = f"{user_folder}images/"
+        user_audio_folder = f"{user_folder}audio/"
+        folders = [user_images_folder, user_audio_folder]
+        
+        for folder in folders:
+            self.create_folder(folder)
+        # 初期の会話履歴ファイルを作成
+        history_file_path = f"{user_id}history.txt"
+        initial_history_content = "ユーザーとのインタラクション履歴:\n"
+        self.upload_file(history_file_path, initial_history_content)
