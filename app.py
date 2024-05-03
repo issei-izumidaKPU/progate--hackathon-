@@ -24,7 +24,7 @@ credentials_dict = {
     "type": os.getenv("TYPE"),
     "project_id": os.getenv("PROJECT_ID"),
     "private_key_id": os.getenv("PRIVATE_KEY_ID"),
-    "private_key": os.getenv("PRIVATE_KEY").replace('\\n', '\n'),
+    "private_key": os.getenv("PRIVATE_KEY"),
     "client_email": os.getenv("CLIENT_EMAIL"),
     "client_id": os.getenv("CLIENT_ID"),
     "auth_uri": os.getenv("AUTH_URI"),
@@ -55,12 +55,27 @@ def callback():
 
 @app.route("/test-gcs")
 def test_gcs_connection():
+    test_file_name = "test/gcs_test.txt"
+    test_data = "これはテストデータです。"
+
     try:
-        # Google Cloud Storageのバケットを取得
-        bucket = storage_client.get_bucket(GCS_BUCKET_NAME)
-        return f"バケット '{GCS_BUCKET_NAME}' に接続成功しました。"
+        # テストファイルをバケットに書き込み
+        blob = bucket.blob(test_file_name)
+        blob.upload_from_string(test_data)
+        app.logger.info(f"ファイル '{test_file_name}' をバケット '{GCS_BUCKET_NAME}' に書き込みました。")
+
+        # テストファイルをバケットから読み込み
+        blob = bucket.blob(test_file_name)
+        data = blob.download_as_text()
+        app.logger.info(f"ファイル '{test_file_name}' から読み込んだデータ: {data}")
+
+        if data == test_data:
+            return f"バケット '{GCS_BUCKET_NAME}' への書き込みおよび読み込みテストに成功しました。"
+        else:
+            return f"バケット '{GCS_BUCKET_NAME}' のデータ整合性エラー。", 500
+
     except Exception as e:
-        app.logger.error(f"バケットへの接続に失敗しました: {e}")
+        app.logger.error(f"バケット '{GCS_BUCKET_NAME}' への接続に失敗しました: {e}")
         return f"バケットへの接続に失敗しました: {e}", 500
 
 @handler.add(MessageEvent, message=TextMessage)
