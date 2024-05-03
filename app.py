@@ -33,13 +33,11 @@ def chatGPTResponse(prompts, model, user_id, system_prompts=system_prompts, temp
         max_tokens=250  # 生成するトークンの最大数
     )'''
     cloud_storage_manager = CloudStorageManager(bucket_name="user-backets")
-    cloud_storage_manager.ensure_bucket(user_id)
     user_history = cloud_storage_manager.get_user_history(user_id)
     response = openai.ChatCompletion.create(
         model=model,
         messages=[
             {"role": "system", "content": system_prompts},  # システムメッセージの設定
-            # 変換されたテキストをユーザーメッセージとして使用
             {"role": "system", "content": user_history},
             {"role": "user", "content": prompts},  # 変換されたテキストをユーザーメッセージとして使用
         ],
@@ -62,7 +60,7 @@ scheduler.start()
 
 @app.route("/")
 def hello_world():
-    return "Hello, World!"
+    return render_template("index.html")
 
 
 @app.route("/transcribe")
