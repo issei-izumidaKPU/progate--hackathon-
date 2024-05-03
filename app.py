@@ -20,49 +20,14 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 openai.api_key = OPENAI_API_KEY
 # Google Cloud Storageの設
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
-TYPE = os.getenv("TYPE")
-PROJECT_ID = os.getenv("PROJECT_ID")
-PRIVATE_KEY_ID = os.getenv("PRIVATE_KEY_ID")
-PRIVATE_KEY = os.getenv("PRIVATE_KEY")
-CLIENT_EMAIL = os.getenv("CLIENT_EMAIL")
-CLIENT_ID = os.getenv("CLIENT_ID")
-AUTH_URI = os.getenv("AUTH_URI")
-TOKEN_URI = os.getenv("TOKEN_URI")
-AUTH_PROVIDER_X509_CERT_URL = os.getenv("AUTH_PROVIDER_X509_CERT_URL")
-CLIENT_X509_CERT_URL = os.getenv("CLIENT_X509_CERT_URL")
 
-credentials_dict = {
-    "type": TYPE,
-    "project_id": PROJECT_ID,
-    "private_key_id": PRIVATE_KEY_ID,
-    "private_key": PRIVATE_KEY,
-    "client_email": CLIENT_EMAIL,
-    "client_id": CLIENT_ID,
-    "auth_uri": AUTH_URI,
-    "token_uri": TOKEN_URI,
-    "auth_provider_x509_cert_url": AUTH_PROVIDER_X509_CERT_URL,
-    "client_x509_cert_url": CLIENT_X509_CERT_URL
-}
+# GOOGLE_APPLICATION_CREDENTIALS環境変数からJSONファイルのパスを取得
+json_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
 
+# JSONファイルから認証情報を読み込む
+credentials = service_account.Credentials.from_service_account_file(json_path)
 
-# 環境変数のログを出力
-app.logger.info(f"LINE_CHANNEL_ACCESS_TOKEN: {LINE_CHANNEL_ACCESS_TOKEN}")
-app.logger.info(f"LINE_CHANNEL_SECRET: {LINE_CHANNEL_SECRET}")
-app.logger.info(f"OPENAI_API_KEY: {OPENAI_API_KEY}")
-app.logger.info(f"GCS_BUCKET_NAME: {GCS_BUCKET_NAME}")
-app.logger.info(f"TYPE: {TYPE}")
-app.logger.info(f"PROJECT_ID: {PROJECT_ID}")
-app.logger.info(f"PRIVATE_KEY_ID: {PRIVATE_KEY_ID}")
-app.logger.info(f"PRIVATE_KEY: {PRIVATE_KEY}")
-app.logger.info(f"CLIENT_EMAIL: {CLIENT_EMAIL}")
-app.logger.info(f"CLIENT_ID: {CLIENT_ID}")
-app.logger.info(f"AUTH_URI: {AUTH_URI}")
-app.logger.info(f"TOKEN_URI: {TOKEN_URI}")
-app.logger.info(f"AUTH_PROVIDER_X509_CERT_URL: {AUTH_PROVIDER_X509_CERT_URL}")
-app.logger.info(f"CLIENT_X509_CERT_URL: {CLIENT_X509_CERT_URL}")
-
-
-credentials = service_account.Credentials.from_service_account_info(credentials_dict)
+# Google Cloud Storageクライアントを初期化
 storage_client = storage.Client(credentials=credentials, project=credentials.project_id)
 bucket = storage_client.bucket(GCS_BUCKET_NAME)
 
