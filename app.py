@@ -3,7 +3,7 @@ import openai
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage ,ImageMessage, AudioMessage
+from linebot.models import MessageEvent, TextMessage, TextSendMessage ,ImageMessage, AudioMessage, FollowEvent
 from google.cloud import storage
 from google.oauth2 import service_account
 
@@ -82,6 +82,20 @@ def test_gcs_connection():
     except Exception as e:
         app.logger.error(f"バケット '{GCS_BUCKET_NAME}' への接続に失敗しました: {e}")
         return f"バケットへの接続に失敗しました: {e}", 500
+
+@handler.add(FollowEvent)
+def handle_follow(event):
+    user_id = event.source.user_id  # ユーザーのIDを取得
+    welcome_message = "ようこそ！いくつか質問をさせていただきます。"
+    questions = [
+        "あなたの名前は何ですか？",
+        "あなたの趣味は何ですか？",
+        "好きな食べ物は何ですか？"
+    ]
+    # ユーザーに歓迎メッセージと質問を送信
+    line_bot_api.push_message(user_id, TextSendMessage(text=welcome_message))
+    for question in questions:
+        line_bot_api.push_message(user_id, TextSendMessage(text=question))
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
