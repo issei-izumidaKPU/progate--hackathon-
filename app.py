@@ -33,7 +33,7 @@ def chatGPTResponse(prompts, model, user_id, system_prompts=system_prompts, temp
         max_tokens=250  # 生成するトークンの最大数
     )'''
     cloud_storage_manager = CloudStorageManager(bucket_name="user-backets")
-    user_history = cloud_storage_manager.get_user_history(user_id)
+    user_history = cloud_storage_manager.readChatHistory(user_id)
     response = openai.ChatCompletion.create(
         model=model,
         messages=[
