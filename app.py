@@ -3,9 +3,9 @@ import openai
 from flask import Flask, request, abort, render_template
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage ,ImageMessage, AudioMessage, FollowEvent, ImageSendMessage
-from google.cloud import storage
-from google.oauth2 import service_account
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageMessage, AudioMessage, FollowEvent, ImageSendMessage
+from apscheduler.schedulers.background import BackgroundScheduler
+from gcs_client import CloudStorageManager
 
 app = Flask(__name__)
 from dotenv import load_dotenv
@@ -18,28 +18,18 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 openai.api_key = OPENAI_API_KEY
-# Google Cloud Storageの設
-GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
-# 環境変数から認証情報を取得
-credentials_dict = {
-    "type": os.getenv("TYPE"),
-    "project_id": os.getenv("PROJECT_ID"),
-    "private_key_id": os.getenv("PRIVATE_KEY_ID"),
-    "private_key": os.getenv("PRIVATE_KEY").replace('\\n', '\n'),
-    "client_email": os.getenv("CLIENT_EMAIL"),
-    "client_id": os.getenv("CLIENT_ID"),
-    "auth_uri": os.getenv("AUTH_URI"),
-    "token_uri": os.getenv("TOKEN_URI"),
-    "auth_provider_x509_cert_url": os.getenv("AUTH_PROVIDER_X509_CERT_URL"),
-    "client_x509_cert_url": os.getenv("CLIENT_X509_CERT_URL"),
-    "universe_domain": os.getenv("UNIVERSE_DOMAIN")
-}
+gcs_user_manager = CloudStorageManager("user-backets")
 
-credentials = service_account.Credentials.from_service_account_info(credentials_dict)
 user_status = "INITIAL"
-# Google Cloud Storageクライアントを初期化
-storage_client = storage.Client(credentials=credentials, project=credentials.project_id)
-bucket = storage_client.bucket(GCS_BUCKET_NAME)
+
+def send_encouragement_message():
+    user_id = "YOUR_USER_ID"  # ユーザーIDを設定
+    message = "おはようございます！新しい一日がんばりましょう！"  # 送るメッセージ
+    line_bot_api.push_message(user_id, TextSendMessage(text=message))
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(send_encouragement_message, 'cron', hour=9, minute=0)  # 毎日9時0分に実行
+scheduler.start()
 
 @app.route("/")
 def hello_world():
@@ -49,12 +39,10 @@ def hello_world():
 def transcribe():
     return render_template("transcribe.html")
 
-
 @app.route("/line/login", methods=["GET"])
 def line_login():
-    # 認可コードを取得する
     request_code = request.args["code"]
-    
+    # 認可コードを取得する処理をここに追加
 
 @app.route("/callback", methods=["POST"])
 def callback():
@@ -71,50 +59,16 @@ def callback():
 
 @app.route("/test-gcs")
 def test_gcs_connection():
-    test_file_name = "test/gcs_test.txt"
-    test_data = "これはテストデータです。"
-
-    try:
-        # テストファイルをバケットに書き込み
-        blob = bucket.blob(test_file_name)
-        blob.upload_from_string(test_data)
-        app.logger.info(f"ファイル '{test_file_name}' をバケット '{GCS_BUCKET_NAME}' に書き込みました。")
-
-        # テストファイルをバケットから読み込み
-        blob = bucket.blob(test_file_name)
-        data = blob.download_as_text()
-        app.logger.info(f"ファイル '{test_file_name}' から読み込んだデータ: {data}")
-
-        if data == test_data:
-            return f"バケット '{GCS_BUCKET_NAME}' への書き込みおよび読み込みテストに成功しました。"
-        else:
-            return f"バケット '{GCS_BUCKET_NAME}' のデータ整合性エラー。", 500
-
-    except Exception as e:
-        app.logger.error(f"バケット '{GCS_BUCKET_NAME}' への接続に失敗しました: {e}")
-        return f"バケットへの接続に失敗しました: {e}", 500
+    return gcs_user_manager.test_connection()
 
 @handler.add(FollowEvent)
 def handle_follow(event):
     user_id = event.source.user_id  # ユーザーのIDを取得
-
-    # GCSのバケット内にユーザー専用のフォルダを作成
-    user_folder = f"{user_id}/"
-    user_history_folder = f"{user_id}/history/"
-    user_images_folder = f"{user_id}/images/"
-    user_audio_folder = f"{user_id}/audio/"
-    folders = [user_history_folder, user_images_folder, user_audio_folder]
-    for folder in folders:
-        bucket.blob(folder).upload_from_string('')  # 空のファイルでフォルダを作成
+    gcs_user_manager.initialize_user_storage(user_id)  # ユーザーストレージを初期化
 
     # ユーザーに歓迎メッセージを送信
     welcome_message = "ようこそ！私たちのサービスへ。以下のようなことができます："
     line_bot_api.push_message(user_id, TextSendMessage(text=welcome_message))
-
-    # 履歴管理用のテキストファイルを作成
-    history_file_path = f"{user_history_folder}interaction_history.txt"
-    initial_history_content = "ユーザーとのインタラクション履歴:\n"
-    bucket.blob(history_file_path).upload_from_string(initial_history_content)
 
     # ユーザーにサービスの説明を送信
     service_description = "こちらで写真や音声の保存が可能です。また、質問に答えることでより良いサービスを提供します。"
@@ -126,23 +80,22 @@ def handle_message(event):
     user_id = event.source.user_id  # ユーザーのIDを取得
     if user_status != "INITIAL":
         line_bot_api.push_message(user_id, TextSendMessage(text="初期状態ではありません。"))
-    else: 
+    else:
         # OpenAI APIを使用してレスポンスを生成
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",  # モデルの指定
-            messages=[{"role": "system", "content": "You are an assistant skilled in programming, general knowledge, and tool usage advice. You provide helpful information for tasks in Line.And You must return messages in japanese."},  # システムメッセージの設定
-                    {"role": "user", "content": user_message}],  # ユーザーメッセー
-            max_tokens=250          # 生成するトークンの最大数
+            messages=[{"role": "system", "content": "You are an assistant skilled in programming, general knowledge, and tool usage advice. You provide helpful information for tasks in Line. And You must return messages in japanese."},  # システムメッセージの設定
+                      {"role": "user", "content": user_message}],  # ユーザーメッセージ
+            max_tokens=250  # 生成するトークンの最大数
         )
         res = f"あなたのユーザーIDは{user_id}です。\n"
         res += response.choices[0].message['content'].strip()
         # ユーザーのIDとメッセージをGoogle Cloud Storageに保存
-        blob = bucket.blob(f"{user_id}/{user_message}.txt")
-        blob.upload_from_string(res)
+        gcs_user_manager.upload_file(f"{user_id}/{user_message}.txt", res)
         # LINEユーザーにレスポンスを返信
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text=res)  # 正しいレスポンスの取得方法
+            TextSendMessage(text=s)  # 正しいレスポンスの取得方法
         )
 
 @handler.add(MessageEvent, message=AudioMessage)
@@ -158,8 +111,7 @@ def handle_audio(event):
 
     # 音声ファイルをGCSに保存
     file_path = f"{user_id}/{message_id}.m4a"  # 一意のファイル名
-    blob = bucket.blob(file_path)
-    blob.upload_from_string(audio_bytes, content_type='audio/m4a')
+    gcs_user_manager.upload_file(file_path, audio_bytes, content_type='audio/m4a')
 
     # 音声ファイルをOpenAI APIに送信してテキストに変換
     with open("audio.m4a", "wb") as f:
@@ -182,8 +134,7 @@ def handle_audio(event):
     res += response.choices[0].message['content'].strip()
 
     # ユーザーのIDとメッセージをGoogle Cloud Storageに保存
-    blob = bucket.blob(f"{user_id}/{message_id}.txt")
-    blob.upload_from_string(res)
+    gcs_user_manager.upload_file(f"{user_id}/{message_id}.txt", res)
 
     # LINEユーザーにレスポンスを返信
     line_bot_api.reply_message(
@@ -202,28 +153,15 @@ def handle_image(event):
 
     # 画像ファイルをバケットに書き込み
     image_file_name = f"images/{user_id}.jpg"
-    blob = bucket.blob(image_file_name)
-    blob.upload_from_string(image)
-    app.logger.info(f"画像ファイル '{image_file_name}' をバケット '{GCS_BUCKET_NAME}' に書き込みました。")
+    gcs_user_manager.upload_file(image_file_name, image)
+    app.logger.info(f"画像ファイル '{image_file_name}' をバケットに書き込みました。")
 
     # ユーザーに画像の受信完了を通知
     line_bot_api.push_message(user_id, TextSendMessage(text="画像の受信が完了しました。"))
 
     # 画像ファイルをGoogle Cloud Vision APIに送信して解析
     vision_api_response = "この画像の特徴は次の通りです:\n"
-    # バケットから画像ファイルを読み込み
-    blob = bucket.blob(image_file_name)
-    image_url = blob.public_url
-
-    # ユーザーに画像のURLを送信
-    line_bot_api.push_message(user_id, TextSendMessage(text=f"画像のURL: {image_url}"))
-
-    # ユーザーに画像を送信
-    line_bot_api.push_message(user_id, ImageSendMessage(original_content_url=image_url, preview_image_url=image_url))
-    app.logger.info(f"画像のURL: {image_url}")
     line_bot_api.push_message(user_id, TextSendMessage(text=vision_api_response))
-    return "OK" 
-
 
 if __name__ == "__main__":
     app.run()
