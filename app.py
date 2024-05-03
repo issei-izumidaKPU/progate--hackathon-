@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import os
 import openai
 from flask import Flask, request, abort, render_template
@@ -8,7 +9,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from gcs_client import CloudStorageManager
 
 app = Flask(__name__)
-from dotenv import load_dotenv
 load_dotenv()
 
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
@@ -22,6 +22,7 @@ gcs_user_manager = CloudStorageManager("user-backets")
 system_prompts = "You are an assistant skilled in programming, general knowledge, and tool usage advice. You provide helpful information for tasks in Line. And You must return messages in japanese."
 user_status = "INITIAL"
 
+
 def chatGPTResponse(prompts, model, user_id, system_prompts=system_prompts, temperature=0.5):
     '''response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",  # モデルの指定
@@ -32,39 +33,48 @@ def chatGPTResponse(prompts, model, user_id, system_prompts=system_prompts, temp
         max_tokens=250  # 生成するトークンの最大数
     )'''
     cloud_storage_manager = CloudStorageManager(bucket_name="user-backets")
+    cloud_storage_manager.ensure_bucket(user_id)
     user_history = cloud_storage_manager.get_user_history(user_id)
     response = openai.ChatCompletion.create(
         model=model,
         messages=[
             {"role": "system", "content": system_prompts},  # システムメッセージの設定
-            {"role": "system", "content": user_history},  # 変換されたテキストをユーザーメッセージとして使用
+            # 変換されたテキストをユーザーメッセージとして使用
+            {"role": "system", "content": user_history},
             {"role": "user", "content": prompts},  # 変換されたテキストをユーザーメッセージとして使用
         ],
         temperature=temperature
     )
     return response.choices[0].message['content'].strip()
 
+
 def send_encouragement_message():
     user_id = "YOUR_USER_ID"  # ユーザーIDを設定
     message = "おはようございます！新しい一日がんばりましょう！"  # 送るメッセージ
     line_bot_api.push_message(user_id, TextSendMessage(text=message))
 
+
 scheduler = BackgroundScheduler()
-scheduler.add_job(send_encouragement_message, 'cron', hour=9, minute=0)  # 毎日9時0分に実行
+scheduler.add_job(send_encouragement_message, 'cron',
+                  hour=9, minute=0)  # 毎日9時0分に実行
 scheduler.start()
+
 
 @app.route("/")
 def hello_world():
     return "Hello, World!"
 
+
 @app.route("/transcribe")
 def transcribe():
     return render_template("transcribe.html")
+
 
 @app.route("/line/login", methods=["GET"])
 def line_login():
     request_code = request.args["code"]
     # 認可コードを取得する処理をここに追加
+
 
 @app.route("/callback", methods=["POST"])
 def callback():
@@ -79,9 +89,11 @@ def callback():
 
     return "OK"
 
+
 @app.route("/test-gcs")
 def test_gcs_connection():
     return gcs_user_manager.test_connection()
+
 
 @handler.add(FollowEvent)
 def handle_follow(event):
@@ -94,7 +106,9 @@ def handle_follow(event):
 
     # ユーザーにサービスの説明を送信
     service_description = "こちらで写真や音声の保存が可能です。また、質問に答えることでより良いサービスを提供します。"
-    line_bot_api.push_message(user_id, TextSendMessage(text=service_description))
+    line_bot_api.push_message(
+        user_id, TextSendMessage(text=service_description))
+
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -103,23 +117,21 @@ def handle_message(event):
         model = "gpt-4-turbo"
     user_message = event.message.text  # ユーザーからのメッセージを取得
     user_id = event.source.user_id  # ユーザーのIDを取得
-    if user_status != "INITIAL":
-        line_bot_api.push_message(user_id, TextSendMessage(text="初期状態ではありません。"))
-    else:
-        # ユーザーのメッセージを使用してレスポンスを生成
-        response = chatGPTResponse(user_message, model, user_id)
-        res = f"あなたのユーザーIDは{user_id}です。\n"
-        res += response
-        # ユーザーの履歴を取得し、新しいメッセージを追加
-        user_history = gcs_user_manager.get_user_history(user_id)
-        updated_history = user_history + "\n" + res
-        # 更新された履歴をGoogle Cloud Storageに保存
-        gcs_user_manager.upload_file(f"{user_id}/history/interaction_history.txt", updated_history)
-        # LINEユーザーにレスポンスを返信
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=res)  # 正しいレスポンスの取得方法
-        )
+    gcs_client = CloudStorageManager("user-backets")
+    gcs_client.ensure_bucket(user_id)
+    gcs_client.unseure_user_storage(user_id)
+    gcs_client.writeChatHistory(user_id,"user",user_message)
+    # ユーザーのメッセージを使用してレスポンスを生成
+    response = chatGPTResponse(user_message, model, user_id)
+    res = f"あなたのユーザーIDは{user_id}です。\n"
+    res += response
+    gcs_client.writeChatHistory(user_id,"system",response)
+    # LINEユーザーにレスポンスを返信
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=res)  # 正しいレスポンスの取得方法
+    )
+
 
 @handler.add(MessageEvent, message=AudioMessage)
 def handle_audio(event):
@@ -134,7 +146,8 @@ def handle_audio(event):
 
     # 音声ファイルをGCSに保存
     file_path = f"{user_id}/{message_id}.m4a"  # 一意のファイル名
-    gcs_user_manager.upload_file(file_path, audio_bytes, content_type='audio/m4a')
+    gcs_user_manager.upload_file(
+        file_path, audio_bytes, content_type='audio/m4a')
 
     # 音声ファイルをOpenAI APIに送信してテキストに変換
     with open("audio.m4a", "wb") as f:
@@ -148,7 +161,8 @@ def handle_audio(event):
         model="gpt-3.5-turbo",  # モデルの指定
         messages=[
             {"role": "system", "content": "You are an assistant skilled in programming, general knowledge, and tool usage advice. You provide helpful information for tasks in Line. And You must return messages in japanese."},  # システムメッセージの設定
-            {"role": "user", "content": transcript["text"]},  # 変換されたテキストをユーザーメッセージとして使用
+            # 変換されたテキストをユーザーメッセージとして使用
+            {"role": "user", "content": transcript["text"]},
         ],
         max_tokens=250  # 生成するトークンの最大数
     )
@@ -164,6 +178,7 @@ def handle_audio(event):
         event.reply_token,
         TextSendMessage(text=res)
     )
+
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
@@ -184,7 +199,9 @@ def handle_image(event):
 
     # 画像ファイルをGoogle Cloud Vision APIに送信して解析
     vision_api_response = "この画像の特徴は次の通りです:\n"
-    line_bot_api.push_message(user_id, TextSendMessage(text=vision_api_response))
+    line_bot_api.push_message(
+        user_id, TextSendMessage(text=vision_api_response))
+
 
 if __name__ == "__main__":
     app.run()
