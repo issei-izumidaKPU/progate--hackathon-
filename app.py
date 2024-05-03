@@ -18,7 +18,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 openai.api_key = OPENAI_API_KEY
-# Google Cloud Storageの設定
+# Google Cloud Storageの設
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 credentials_dict = {
     "type": os.getenv("TYPE"),
