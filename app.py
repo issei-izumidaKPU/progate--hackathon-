@@ -196,11 +196,6 @@ def handle_image(event):
     user_id = event.source.user_id  # ユーザーのIDを取得
     message_id = event.message.id  # メッセージのIDを取得
 
-    # 画像のフローを実行
-    image_flow(user_id, message_id, bucket)
-    return
-
-def image_flow(user_id, message_id, bucket):
     # メッセージIDを元に画像ファイルを取得
     message_content = line_bot_api.get_message_content(message_id)
     image = message_content.content
@@ -227,7 +222,7 @@ def image_flow(user_id, message_id, bucket):
     line_bot_api.push_message(user_id, ImageSendMessage(original_content_url=image_url, preview_image_url=image_url))
     app.logger.info(f"画像のURL: {image_url}")
     line_bot_api.push_message(user_id, TextSendMessage(text=vision_api_response))
-    return
+    return "OK" 
 
 
 if __name__ == "__main__":
