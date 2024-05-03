@@ -3,7 +3,7 @@ import openai
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from linebot.models import MessageEvent, TextMessage, TextSendMessage ,ImageMessage
 from google.cloud import storage
 from google.oauth2 import service_account
 
@@ -19,11 +19,20 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 openai.api_key = OPENAI_API_KEY
 # Google Cloud Storageの設定
-GCS_BUCKET_NAME = 'test_bucket'
-GCS_CREDENTIALS_FILE = './progatehackathon-0a9eee336c13.json'
-credentials = service_account.Credentials.from_service_account_file(
-    GCS_CREDENTIALS_FILE
-)
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
+credentials_dict = {
+    "type": os.getenv("TYPE"),
+    "project_id": os.getenv("PROJECT_ID"),
+    "private_key_id": os.getenv("PRIVATE_KEY_ID"),
+    "private_key": os.getenv("PRIVATE_KEY").replace('\\n', '\n'),
+    "client_email": os.getenv("CLIENT_EMAIL"),
+    "client_id": os.getenv("CLIENT_ID"),
+    "auth_uri": os.getenv("AUTH_URI"),
+    "token_uri": os.getenv("TOKEN_URI"),
+    "auth_provider_x509_cert_url": os.getenv("AUTH_PROVIDER_X509_CERT_URL"),
+    "client_x509_cert_url": os.getenv("CLIENT_X509_CERT_URL")
+}
+credentials = service_account.Credentials.from_service_account_info(credentials_dict)
 storage_client = storage.Client(credentials=credentials, project=credentials.project_id)
 bucket = storage_client.bucket(GCS_BUCKET_NAME)
 
@@ -43,6 +52,16 @@ def callback():
         abort(400)
 
     return "OK"
+
+@app.route("/test-gcs")
+def test_gcs_connection():
+    try:
+        # Google Cloud Storageのバケットを取得
+        bucket = storage_client.get_bucket(GCS_BUCKET_NAME)
+        return f"バケット '{GCS_BUCKET_NAME}' に接続成功しました。"
+    except Exception as e:
+        app.logger.error(f"バケットへの接続に失敗しました: {e}")
+        return f"バケットへの接続に失敗しました: {e}", 500
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -67,7 +86,28 @@ def handle_message(event):
         TextSendMessage(text=res)  # 正しいレスポンスの取得方法
     )
 
+@handler.add(MessageEvent, message=ImageMessage)
+def handle_image(event):
+    user_id = event.source.user_id  # ユーザーのIDを取得
+    message_id = event.message.id  # メッセージのIDを取得
 
+    # LINEから画像コンテンツを取得
+    message_content = line_bot_api.get_message_content(message_id)
+    image_bytes = b''
+    for chunk in message_content.iter_content():
+        image_bytes += chunk
+
+    # 画像をGCSに保存
+    file_path = f"{user_id}/{message_id}.jpg"  # 一意のファイル名
+    blob = bucket.blob(file_path)
+    blob.upload_from_string(image_bytes, content_type='image/jpeg')
+
+    # ユーザーに保存完了のメッセージを送信
+    response_message = f"画像が保存されました: {file_path}"
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=response_message)
+    )
 
 if __name__ == "__main__":
     app.run()
