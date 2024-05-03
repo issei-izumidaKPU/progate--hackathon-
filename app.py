@@ -118,7 +118,7 @@ def handle_message(event):
     user_message = event.message.text  # ユーザーからのメッセージを取得
     user_id = event.source.user_id  # ユーザーのIDを取得
     gcs_client = CloudStorageManager("user-backets")
-    gcs_client.ensure_user_storage_user_storage(user_id)
+    gcs_client.ensure_user_storage(user_id)
     gcs_client.writeChatHistory(user_id,"user",user_message)
     # ユーザーのメッセージを使用してレスポンスを生成
     response = chatGPTResponse(user_message, model, user_id)
