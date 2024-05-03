@@ -95,7 +95,7 @@ def handle_message(event):
         # LINEユーザーにレスポンスを返信
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text=s)  # 正しいレスポンスの取得方法
+            TextSendMessage(text=res)  # 正しいレスポンスの取得方法
         )
 
 @handler.add(MessageEvent, message=AudioMessage)
