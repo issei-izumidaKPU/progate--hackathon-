@@ -22,7 +22,7 @@ openai.api_key = OPENAI_API_KEY
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 
 # GOOGLE_APPLICATION_CREDENTIALS環境変数からJSONファイルのパスを取得
-json_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+json_path = "./credentials.json"
 
 # JSONファイルから認証情報を読み込む
 credentials = service_account.Credentials.from_service_account_file(json_path)
