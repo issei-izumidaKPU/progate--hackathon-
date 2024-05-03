@@ -3,7 +3,7 @@ import openai
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage ,ImageMessage
+from linebot.models import MessageEvent, TextMessage, TextSendMessage ,ImageMessage, AudioMessage
 from google.cloud import storage
 from google.oauth2 import service_account
 
@@ -84,6 +84,52 @@ def handle_message(event):
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=res)  # 正しいレスポンスの取得方法
+    )
+
+@handler.add(MessageEvent, message=AudioMessage)
+def handle_audio(event):
+    user_id = event.source.user_id  # ユーザーのIDを取得
+    message_id = event.message.id  # メッセージのIDを取得
+
+    # LINEから音声コンテンツを取得
+    message_content = line_bot_api.get_message_content(message_id)
+    audio_bytes = b''
+    for chunk in message_content.iter_content():
+        audio_bytes += chunk
+
+    # 音声ファイルをGCSに保存
+    file_path = f"{user_id}/{message_id}.m4a"  # 一意のファイル名
+    blob = bucket.blob(file_path)
+    blob.upload_from_string(audio_bytes, content_type='audio/m4a')
+
+    # 音声ファイルをOpenAI APIに送信してテキストに変換
+    with open("audio.m4a", "wb") as f:
+        f.write(audio_bytes)
+
+    audio_file = open("audio.m4a", "rb")
+    transcript = openai.Audio.transcribe("whisper-1", audio_file)
+
+    # 変換されたテキストを使用してレスポンスを生成
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # モデルの指定
+        messages=[
+            {"role": "system", "content": "You are an assistant skilled in programming, general knowledge, and tool usage advice. You provide helpful information for tasks in Line. And You must return messages in japanese."},  # システムメッセージの設定
+            {"role": "user", "content": transcript["text"]},  # 変換されたテキストをユーザーメッセージとして使用
+        ],
+        max_tokens=250  # 生成するトークンの最大数
+    )
+
+    res = f"あなたのユーザーIDは{user_id}です。\n"
+    res += response.choices[0].message['content'].strip()
+
+    # ユーザーのIDとメッセージをGoogle Cloud Storageに保存
+    blob = bucket.blob(f"{user_id}/{message_id}.txt")
+    blob.upload_from_string(res)
+
+    # LINEユーザーにレスポンスを返信
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=res)
     )
 
 @handler.add(MessageEvent, message=ImageMessage)
