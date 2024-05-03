@@ -62,7 +62,7 @@ class CloudStorageManager:
             self.create_folder(folder)  # 各フォルダを作成
         
         # 初期の会話履歴ファイルを作成
-        history_file_path = f"{user_id}history.txt"
+        history_file_path = f"{user_id}/history.txt"
         initial_history_content = "ユーザーとのインタラクション履歴:\n"
         self.upload_file(history_file_path, initial_history_content)
 
@@ -75,7 +75,7 @@ class CloudStorageManager:
         for folder in folders:
             self.create_folder(folder)
         # 初期の会話履歴ファイルを作成
-        history_file_path = f"{user_id}history.txt"
+        history_file_path = f"{user_id}/history.txt"
         initial_history_content = "ユーザーとのインタラクション履歴:\n"
         self.upload_file(history_file_path, initial_history_content)
         
@@ -87,7 +87,7 @@ class CloudStorageManager:
         self.upload_file(history_file_path, history)
         
     def readChatHistory(self, user_id):
-        history_file_path = f"{user_id}history.txt"
+        history_file_path = f"{user_id}/history.txt"
         history_content = self.download_file(history_file_path)
         # 履歴を改行で分割し、最後の5行だけを取得
         history_lines = history_content.split('\n')
