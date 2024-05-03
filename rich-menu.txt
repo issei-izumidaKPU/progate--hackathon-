@@ -1,0 +1,55 @@
+curl -v -X POST https://api.line.me/v2/bot/richmenu \
+-H 'Authorization: Bearer {G/GWajx/dWCMiTnd8NYQuthmw9MZxenLJHOfJys515rjFaYy32FuA1GZQY3TRFh2XCRB3987ekmDBHmfv4StheSuWQKtzIHKR4feBbUQ6AYO6CWgnDpm3Ce8iWkbHnfmRA4c0WpQd/yL8k0nmU2a3AdB04t89/1O/w1cDnyilFU=}' \
+-H 'Content-Type: application/json' \
+-d \
+'{
+    "size": {
+        "width": 2500,
+        "height": 1686
+    },
+    "selected": false,
+    "name": "リッチメニューのテスト",
+    "chatBarText": "Tap to open",
+    "areas": [
+        {
+            "bounds": {
+                "x": 0,
+                "y": 0,
+                "width": 1666,
+                "height": 1686
+            },
+            "action": {
+                "type": "message",
+                "label": "タップ領域A",
+                "uri": "GPT-4を使用する"
+            }
+        },
+        {
+            "bounds": {
+                "x": 1667,
+                "y": 0,
+                "width": 834,
+                "height": 843
+            },
+            "action": {
+                "type": "uri",
+                "label": "タップ領域B",
+                "uri": "https://lineapiusecase.com/ja/top.html"
+            }
+        },
+        {
+            "bounds": {
+                "x": 1667,
+                "y": 844,
+                "width": 834,
+                "height": 843
+            },
+            "action": {
+                "type": "uri",
+                "label": "タップ領域C",
+                "uri": "https://techblog.lycorp.co.jp/ja/"
+            }
+        }
+    ]
+}'
+

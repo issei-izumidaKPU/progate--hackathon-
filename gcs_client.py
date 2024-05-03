@@ -72,3 +72,8 @@ class CloudStorageManager:
         history_file_path = f"{user_history_folder}interaction_history.txt"
         initial_history_content = "ユーザーとのインタラクション履歴:\n"
         self.upload_file(history_file_path, initial_history_content)
+
+    def get_user_history(self, user_id):
+        """ユーザーの会話履歴を取得する。返り値は文字列です。"""
+        history_file_path = f"{user_id}/history/interaction_history.txt"
+        return self.download_file(history_file_path)

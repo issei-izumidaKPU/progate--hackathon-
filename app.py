@@ -19,8 +19,30 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 openai.api_key = OPENAI_API_KEY
 gcs_user_manager = CloudStorageManager("user-backets")
-
+system_prompts = "You are an assistant skilled in programming, general knowledge, and tool usage advice. You provide helpful information for tasks in Line. And You must return messages in japanese."
 user_status = "INITIAL"
+
+def chatGPTResponse(prompts, model, user_id, system_prompts=system_prompts, temperature=0.5):
+    '''response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # モデルの指定
+        messages=[
+            {"role": "system", "content": "You are an assistant skilled in programming, general knowledge, and tool usage advice. You provide helpful information for tasks in Line. And You must return messages in japanese."},  # システムメッセージの設定
+            {"role": "user", "content": transcript["text"]},  # 変換されたテキストをユーザーメッセージとして使用
+        ],
+        max_tokens=250  # 生成するトークンの最大数
+    )'''
+    cloud_storage_manager = CloudStorageManager(bucket_name="user-backets")
+    user_history = cloud_storage_manager.get_user_history(user_id)
+    response = openai.ChatCompletion.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompts},  # システムメッセージの設定
+            {"role": "system", "content": user_history},  # 変換されたテキストをユーザーメッセージとして使用
+            {"role": "user", "content": prompts},  # 変換されたテキストをユーザーメッセージとして使用
+        ],
+        temperature=temperature
+    )
+    return response.choices[0].message['content'].strip()
 
 def send_encouragement_message():
     user_id = "YOUR_USER_ID"  # ユーザーIDを設定
@@ -76,22 +98,23 @@ def handle_follow(event):
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    model = "gpt-3.5-turbo"
+    if event.message.text == "GPT-4を使用する":
+        model = "gpt-4-turbo"
     user_message = event.message.text  # ユーザーからのメッセージを取得
     user_id = event.source.user_id  # ユーザーのIDを取得
     if user_status != "INITIAL":
         line_bot_api.push_message(user_id, TextSendMessage(text="初期状態ではありません。"))
     else:
-        # OpenAI APIを使用してレスポンスを生成
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # モデルの指定
-            messages=[{"role": "system", "content": "You are an assistant skilled in programming, general knowledge, and tool usage advice. You provide helpful information for tasks in Line. And You must return messages in japanese."},  # システムメッセージの設定
-                      {"role": "user", "content": user_message}],  # ユーザーメッセージ
-            max_tokens=250  # 生成するトークンの最大数
-        )
+        # ユーザーのメッセージを使用してレスポンスを生成
+        response = chatGPTResponse(user_message, model, user_id)
         res = f"あなたのユーザーIDは{user_id}です。\n"
-        res += response.choices[0].message['content'].strip()
-        # ユーザーのIDとメッセージをGoogle Cloud Storageに保存
-        gcs_user_manager.upload_file(f"{user_id}/{user_message}.txt", res)
+        res += response
+        # ユーザーの履歴を取得し、新しいメッセージを追加
+        user_history = gcs_user_manager.get_user_history(user_id)
+        updated_history = user_history + "\n" + res
+        # 更新された履歴をGoogle Cloud Storageに保存
+        gcs_user_manager.upload_file(f"{user_id}/history/interaction_history.txt", updated_history)
         # LINEユーザーにレスポンスを返信
         line_bot_api.reply_message(
             event.reply_token,
