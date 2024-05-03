@@ -3,7 +3,7 @@ import openai
 from flask import Flask, request, abort, render_template
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage ,ImageMessage, AudioMessage, FollowEvent
+from linebot.models import MessageEvent, TextMessage, TextSendMessage ,ImageMessage, AudioMessage, FollowEvent, ImageSendMessage
 from google.cloud import storage
 from google.oauth2 import service_account
 
@@ -55,8 +55,6 @@ def line_login():
     # 認可コードを取得する
     request_code = request.args["code"]
     
-
-
 
 @app.route("/callback", methods=["POST"])
 def callback():
@@ -127,10 +125,7 @@ def handle_message(event):
     user_message = event.message.text  # ユーザーからのメッセージを取得
     user_id = event.source.user_id  # ユーザーのIDを取得
     if user_status != "INITIAL":
-        line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text="初期状態ではありません。")  # 正しいレスポンスの取得方法
-        )
+        line_bot_api.push_message(user_id, TextSendMessage(text="初期状態ではありません。"))
     else: 
         # OpenAI APIを使用してレスポンスを生成
         response = openai.ChatCompletion.create(
@@ -201,25 +196,10 @@ def handle_image(event):
     user_id = event.source.user_id  # ユーザーのIDを取得
     message_id = event.message.id  # メッセージのIDを取得
 
-    # LINEから画像コンテンツを取得
-    message_content = line_bot_api.get_message_content(message_id)
-    image_bytes = b''
-    for chunk in message_content.iter_content():
-        image_bytes += chunk
+    # 画像のフローを実行
+    image_flow(user_id, message_id, bucket)
+    return
 
-    # 画像をGCSに保存
-    file_path = f"{user_id}/{message_id}.jpg"  # 一意のファイル名
-    blob = bucket.blob(file_path)
-    blob.upload_from_string(image_bytes, content_type='image/jpeg')
-
-    # ユーザーに保存完了のメッセージを送信
-    response_message = f"画像が保存されました: {file_path}"
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=response_message)
-    )
-
-'''
 def image_flow(user_id, message_id, bucket):
     # メッセージIDを元に画像ファイルを取得
     message_content = line_bot_api.get_message_content(message_id)
@@ -234,25 +214,8 @@ def image_flow(user_id, message_id, bucket):
     # ユーザーに画像の受信完了を通知
     line_bot_api.push_message(user_id, TextSendMessage(text="画像の受信が完了しました。"))
 
+    # 画像ファイルをGoogle Cloud Vision APIに送信して解析
     vision_api_response = "この画像の特徴は次の通りです:\n"
-    
-    
-    # OpenAI APIを使用してレスポンスを生成
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",  # モデルの指定
-        messages=[{"role": "system", "content": "あなたは優秀な就職アドバイザーです。次に与える情報は学生のESの画像から文字起こしされたテキストとです。このテキストに含まれる情報を元に、就職をサポートしてください。ただし、返答は日本語で行ってください。"},  # システムメッセージの設定
-                  {"role": "user", "content": user_message}],  # ユーザーメッセー
-        max_tokens=250          # 生成するトークンの最大数
-    )
-    
-    
-    # LINEユーザーにレスポンスを返信
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=res)  # 正しいレスポンスの取得方法
-    )
-    
-    
     # バケットから画像ファイルを読み込み
     blob = bucket.blob(image_file_name)
     image_url = blob.public_url
@@ -261,10 +224,10 @@ def image_flow(user_id, message_id, bucket):
     line_bot_api.push_message(user_id, TextSendMessage(text=f"画像のURL: {image_url}"))
 
     # ユーザーに画像を送信
-    line_bot_api.push_message(user_id, ImageSendMessage(original_content_url=image_url, preview_image_url=image_url)
+    line_bot_api.push_message(user_id, ImageSendMessage(original_content_url=image_url, preview_image_url=image_url))
     app.logger.info(f"画像のURL: {image_url}")
+    line_bot_api.push_message(user_id, TextSendMessage(text=vision_api_response))
     return
-''' 
 
 
 if __name__ == "__main__":
