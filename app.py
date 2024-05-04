@@ -11,7 +11,7 @@ from pathlib import Path
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
-from flask import Flask, request, abort, render_template
+from flask import Flask, request, abort, render_template,send_from_directory
 from flask_socketio import SocketIO, emit
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
@@ -232,12 +232,16 @@ def line_login():
 def transcribe():
     return render_template("transcribe.html")
 
-@app.route("/audio.html")
+@app.route("/audio")
 def audio():
     return render_template("audio.html")
 
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', )
+
 @app.route("/get_uimages/<user_id>",methods=["GET"])
-def get_user_images():
+def get_user_images(user_id):
     gcs_client = CloudStorageManager("user-images") 
     return gcs_client.get_user_images(user_id)
 
