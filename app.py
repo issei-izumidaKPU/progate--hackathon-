@@ -6,6 +6,7 @@ import json
 import openai
 import re
 import sys
+import sqlite3
 from pathlib import Path
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
@@ -187,6 +188,51 @@ def chatGPTResponseFromImages(prompt):
     text = response.choices[0].message['content'].strip()
     return text
 
+def sqlite_update(USER_ID, NICKNAME, AGE, RESIDENCE, GRADE):
+    conn = sqlite3.connect('instance/db.sqlite3')
+    cursor = conn.cusor()
+    
+    user_id = USER_ID
+    nickname = NICKNAME
+    age = AGE
+    residence = RESIDENCE
+    grade = GRADE
+    
+    # SQLインジェクション対策
+    update_query = """
+        UPDATE users
+        SET nickname = ?,
+            age = ?,
+            residence = ?,
+            grade = ?
+        WHERE user_id = ?
+    """
+    
+    cursor.execute(update_query, (nickname, age, residence, grade, user_id))
+    conn.commit()
+    conn.close()
+    
+def get_user_ids():
+    # SQLite3データベースに接続
+    conn = sqlite3.connect('instance/db.sqlite3')
+    cursor = conn.cursor()
+
+    try:
+        # ユーザーIDの一覧を取得するSQLクエリ
+        select_query = """
+            SELECT user_id
+            FROM users
+        """
+        
+        # SQLクエリを実行し、結果を取得
+        cursor.execute(select_query)
+        user_ids = [row[0] for row in cursor.fetchall()]  # ユーザーIDの一覧を取得
+        
+        return user_ids
+
+    finally:
+        # データベース接続を閉じる
+        conn.close()
 
 def send_encouragement_message():
     user_id = "YOUR_USER_ID"  # ユーザーIDを設定
@@ -194,10 +240,17 @@ def send_encouragement_message():
     line_bot_api.push_message(user_id, TextSendMessage(text=message))
 
 
+#SQLからユーザーIDの一覧を取得
+user_ids = get_user_ids()
+
+
 scheduler = BackgroundScheduler()
-scheduler.add_job(send_encouragement_message, 'cron',
+#ユーザーIDごとにエンカレッジメントメッセージを送信
+for user_id in user_ids:
+    scheduler.add_job(send_encouragement_message(), 'cron',
                   hour=9, minute=0)  # 毎日9時0分に実行
-scheduler.start()
+    scheduler.start()
+
 
 
 @app.route("/", methods=["GET"])
