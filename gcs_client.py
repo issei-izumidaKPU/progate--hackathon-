@@ -94,3 +94,9 @@ class CloudStorageManager:
         history_lines = history_content.split('\n')
         last_five_conversations = '\n'.join(history_lines[-6:-1])  # 最後の5行を取得（-1は最後の空行を除外するため）
         return last_five_conversations
+    
+    def get_user_images_folder(self, user_id):
+        folder_path = f"{user_id}/images/"
+        blobs = self.bucket.list_blobs(prefix=folder_path)
+        images = [blob.name for blob in blobs if blob.name.endswith(('.png', '.jpg', '.jpeg'))]
+        return images
