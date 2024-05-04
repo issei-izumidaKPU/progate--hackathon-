@@ -1,5 +1,8 @@
 from dotenv import load_dotenv
 import os
+import jwt
+import requests
+import json
 import openai
 import re
 import sys
@@ -10,7 +13,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask import Flask, request, abort, render_template
 from flask_socketio import SocketIO, emit
 from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError,LineBotApiError
+from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import MessageEvent, TextMessage, ButtonsTemplate,  TemplateSendMessage, PostbackAction, TextSendMessage, ImageMessage, AudioMessage, FollowEvent, ImageSendMessage, PostbackEvent
 import linebot.v3.messaging
 from linebot.v3.messaging.rest import ApiException
@@ -19,14 +22,13 @@ from gcs_client import CloudStorageManager
 # from . import MicrophoneStream
 from datetime import datetime
 import ocr as gcpapi
-
+load_dotenv()
 # APIクライアントの設定
 configuration = linebot.v3.messaging.Configuration(
     access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 )
 api_client = linebot.v3.messaging.ApiClient(configuration)
 
-load_dotenv()
 db = SQLAlchemy()
 socketio = SocketIO()
 
@@ -47,6 +49,7 @@ def create_app():
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config["SECRET_KEY"] = "sample1216"
     db.init_app(app)
     socketio.init_app(app)  # 既存の socketio インスタンスに app を関連付ける
     migrate = Migrate(app, db)
@@ -61,7 +64,9 @@ if __name__ == "__main__":
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
+LINE_CHANNEL_ID = os.getenv("LINE_CHANNEL_ID")
+LINE_LOGIN_CHANNEL_SECRET = os.getenv("LINE_LOGIN_CHANNEL_SECRET")
+REDIRECT_URL = os.getenv("REDIRECT_URL")
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 openai.api_key = OPENAI_API_KEY
@@ -183,7 +188,6 @@ def chatGPTResponseFromImages(prompt):
     return text
 
 
-
 def send_encouragement_message():
     user_id = "YOUR_USER_ID"  # ユーザーIDを設定
     message = "おはようございます！新しい一日がんばりましょう！"  # 送るメッセージ
@@ -196,10 +200,41 @@ scheduler.add_job(send_encouragement_message, 'cron',
 scheduler.start()
 
 
-@app.route("/")
-# マイページ的なもの
-def hello_world():
-    return render_template("index.html")
+@app.route("/", methods=["GET"])
+def index():
+    return render_template("index.html",
+                           random_state="line1216",
+                           channel_id=LINE_CHANNEL_ID,
+                           redirect_url=REDIRECT_URL)
+
+
+@app.route("/line/login", methods=["GET"])
+def line_login():
+    # 認可コードを取得する
+    request_code = request.args["code"]
+    uri_access_token = "https://api.line.me/oauth2/v2.1/token"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    data_params = {
+        "grant_type": "authorization_code",
+        "code": request_code,
+        "redirect_uri": REDIRECT_URL,
+        "client_id": LINE_CHANNEL_ID,
+        "client_secret": LINE_LOGIN_CHANNEL_SECRET
+    }
+
+    # トークンを取得するためにリクエストを送る
+    response_post = requests.post(
+        uri_access_token, headers=headers, data=data_params)
+    line_id_token = json.loads(response_post.text)["id_token"]
+
+    # ペイロード部分をデコードすることで、ユーザ情報を取得する
+    decoded_id_token = jwt.decode(line_id_token,
+                                  LINE_LOGIN_CHANNEL_SECRET,
+                                  audience=LINE_CHANNEL_ID,
+                                  issuer='https://access.line.me',
+                                  algorithms=['HS256'])
+
+    return render_template("line_success.html", user_profile=decoded_id_token)
 
 
 @app.route("/transcribe")
@@ -207,11 +242,6 @@ def hello_world():
 def transcribe():
     return render_template("transcribe.html")
 
-
-@app.route("/line/login", methods=["GET"])
-def line_login():
-    request_code = request.args["code"]
-    # 認可コードを取得する処理をここに追加
 
 
 @app.route("/callback", methods=["POST"])
@@ -231,6 +261,7 @@ def callback():
 @app.route("/test-gcs")
 def test_gcs_connection():
     return gcs_user_manager.test_connection()
+
 
 @handler.add(FollowEvent)
 def handle_follow(event):
@@ -286,6 +317,7 @@ def handle_postback(event):
         TextSendMessage(text=response_message)
     )
 
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     try:
@@ -293,11 +325,12 @@ def handle_message(event):
         api_instance = linebot.v3.messaging.MessagingApi(api_client)
         chat_id = event.source.user_id
         # ローディングアニメーションの表示リクエストを送信
-        show_loading_animation_request = linebot.v3.messaging.ShowLoadingAnimationRequest(chat_id=chat_id)
+        show_loading_animation_request = linebot.v3.messaging.ShowLoadingAnimationRequest(
+            chat_id=chat_id)
         api_instance.show_loading_animation(show_loading_animation_request)
-        
+
         # 以下、メッセージ処理ロジック（省略）
-            # ユーザーからのポストバックアクションを処理する
+        # ユーザーからのポストバックアクションを処理する
         if event.message.text == "ボタン":
             buttons_template = ButtonsTemplate(
                 title='あなたの選択', text='以下から選んでください', actions=[
@@ -331,7 +364,8 @@ def handle_message(event):
             TextSendMessage(text=res)  # 正しいレスポンスの取得方法
         )
     except ApiException as e:
-        print(f"API exception when calling MessagingApi->show_loading_animation: {e}")
+        print(
+            f"API exception when calling MessagingApi->show_loading_animation: {e}")
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text="申し訳ありませんが、エラーが発生しました。")
@@ -342,7 +376,6 @@ def handle_message(event):
             event.reply_token,
             TextSendMessage(text="予期せぬエラーが発生しました。")
         )
-   
 
 
 @handler.add(MessageEvent, message=AudioMessage)
@@ -398,10 +431,10 @@ def handle_image(event):
     message_id = event.message.id
     message_content = line_bot_api.get_message_content(message_id)
     image = message_content.content
-    res=gcpapi.image_to_text(image)
+    res = gcpapi.image_to_text(image)
     # ユーザーに画像の受信完了を通知
     line_bot_api.push_message(user_id, TextSendMessage(text="画像の受信が完了しました。"))
-    
+
     # GPTに渡してテキストを修正
     corrected_text = chatGPTResponseFromImages(res)
 
@@ -411,5 +444,6 @@ def handle_image(event):
     # ユーザーのIDとメッセージをGoogle Cloud Storageに保存
     gcs_client = CloudStorageManager("user-backets")
     gcs_client.ensure_user_storage(user_id)
-    gcs_client.upload_file(f"{user_id}/images/{message_id}.txt", image, content_type='image/jpeg')
+    gcs_client.upload_file(
+        f"{user_id}/images/{message_id}.txt", image, content_type='image/jpeg')
     gcs_client.writeChatHistory(user_id, "asssytant", corrected_text)
