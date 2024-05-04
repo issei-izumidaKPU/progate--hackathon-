@@ -23,7 +23,7 @@ from gcs_client import CloudStorageManager
 # from . import MicrophoneStream
 from datetime import datetime
 import ocr as gcpapi
-from chat_gpt import chatGPTResponse, chatGPTResponseFromImages
+from chat_gpt import chatGPTResponse, chatGPTResponseFromImages, chatGPTResponseFromGPT
 load_dotenv()
 # APIクライアントの設定
 configuration = linebot.v3.messaging.Configuration(
@@ -441,6 +441,12 @@ def handle_image(event):
 
     # ユーザーに修正されたテキストを送信
     line_bot_api.push_message(user_id, TextSendMessage(text=corrected_text))
+    
+    # さらにGPTに渡して欠点を指摘
+    response = chatGPTResponseFromGPT(corrected_text)
+    
+    # ユーザーに欠点を指摘
+    line_bot_api.push_message(user_id, TextSendMessage(text=response))
 
     # ユーザーのIDとメッセージをGoogle Cloud Storageに保存
     gcs_client = CloudStorageManager("user-backets")
