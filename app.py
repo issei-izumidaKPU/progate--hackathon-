@@ -10,13 +10,21 @@ from flask_sqlalchemy import SQLAlchemy
 from flask import Flask, request, abort, render_template
 from flask_socketio import SocketIO, emit
 from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
+from linebot.exceptions import InvalidSignatureError,LineBotApiError
 from linebot.models import MessageEvent, TextMessage, ButtonsTemplate,  TemplateSendMessage, PostbackAction, TextSendMessage, ImageMessage, AudioMessage, FollowEvent, ImageSendMessage, PostbackEvent
+import linebot.v3.messaging
+from linebot.v3.messaging.rest import ApiException
 from apscheduler.schedulers.background import BackgroundScheduler
 from gcs_client import CloudStorageManager
 # from . import MicrophoneStream
 from datetime import datetime
 import ocr as gcpapi
+
+# APIクライアントの設定
+configuration = linebot.v3.messaging.Configuration(
+    access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
+)
+api_client = linebot.v3.messaging.ApiClient(configuration)
 
 load_dotenv()
 db = SQLAlchemy()
@@ -280,39 +288,61 @@ def handle_postback(event):
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    # ユーザーからのポストバックアクションを処理する
-    if event.message.text == "ボタン":
-        buttons_template = ButtonsTemplate(
-            title='あなたの選択', text='以下から選んでください', actions=[
-                PostbackAction(label='選択肢 1', data='action1'),
-                PostbackAction(label='選択肢 2', data='action2')
-            ]
+    try:
+        # APIインスタンスの作成
+        api_instance = linebot.v3.messaging.MessagingApi(api_client)
+        
+        # ローディングアニメーションの表示リクエストを送信
+        show_loading_animation_request = linebot.v3.messaging.ShowLoadingAnimationRequest()
+        api_instance.show_loading_animation(show_loading_animation_request)
+        
+        # 以下、メッセージ処理ロジック（省略）
+            # ユーザーからのポストバックアクションを処理する
+        if event.message.text == "ボタン":
+            buttons_template = ButtonsTemplate(
+                title='あなたの選択', text='以下から選んでください', actions=[
+                    PostbackAction(label='選択肢 1', data='action1'),
+                    PostbackAction(label='選択肢 2', data='action2')
+                ]
+            )
+            template_message = TemplateSendMessage(
+                alt_text='Buttons alt text', template=buttons_template
+            )
+            line_bot_api.reply_message(event.reply_token, template_message)
+        model = "gpt-3.5-turbo"
+        if event.message.text == "GPT-4を使用する":
+            model = "gpt-4-turbo"
+        user_message = event.message.text  # ユーザーからのメッセージを取得
+        user_id = event.source.user_id  # ユーザーのIDを取得
+        display_name = line_bot_api.get_profile(
+            user_id).display_name  # ユーザーの表示名を取得
+        gcs_client = CloudStorageManager("user-backets")
+        gcs_client.ensure_user_storage(user_id)
+        gcs_client.writeChatHistory(user_id, "user", user_message)
+        # ユーザーのメッセージを使用してレスポンスを生成
+        response = chatGPTResponse(user_message, model, user_id)
+        res = f"あなたのユーザーIDは{user_id}です。\n"
+        res = f"{display_name}さん、こんにちは！\n"
+        res += response
+        gcs_client.writeChatHistory(user_id, "system", response)
+        # LINEユーザーにレスポンスを返信
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=res)  # 正しいレスポンスの取得方法
         )
-        template_message = TemplateSendMessage(
-            alt_text='Buttons alt text', template=buttons_template
+    except ApiException as e:
+        print(f"API exception when calling MessagingApi->show_loading_animation: {e}")
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="申し訳ありませんが、エラーが発生しました。")
         )
-        line_bot_api.reply_message(event.reply_token, template_message)
-    model = "gpt-3.5-turbo"
-    if event.message.text == "GPT-4を使用する":
-        model = "gpt-4-turbo"
-    user_message = event.message.text  # ユーザーからのメッセージを取得
-    user_id = event.source.user_id  # ユーザーのIDを取得
-    display_name = line_bot_api.get_profile(
-        user_id).display_name  # ユーザーの表示名を取得
-    gcs_client = CloudStorageManager("user-backets")
-    gcs_client.ensure_user_storage(user_id)
-    gcs_client.writeChatHistory(user_id, "user", user_message)
-    # ユーザーのメッセージを使用してレスポンスを生成
-    response = chatGPTResponse(user_message, model, user_id)
-    res = f"あなたのユーザーIDは{user_id}です。\n"
-    res = f"{display_name}さん、こんにちは！\n"
-    res += response
-    gcs_client.writeChatHistory(user_id, "system", response)
-    # LINEユーザーにレスポンスを返信
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=res)  # 正しいレスポンスの取得方法
-    )
+    except Exception as e:
+        print(f"Exception in handle_message: {e}")
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="予期せぬエラーが発生しました。")
+        )
+   
 
 
 @handler.add(MessageEvent, message=AudioMessage)
