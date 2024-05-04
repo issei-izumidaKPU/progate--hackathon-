@@ -23,13 +23,13 @@ from gcs_client import CloudStorageManager
 from datetime import datetime
 import ocr as gcpapi
 from chat_gpt import chatGPTResponse, chatGPTResponseFromImages, chatGPTResponseFromGPT
-from langchain.chains import OpenAIChain
-from langchain.schema import Function
+#from langchain.chains import OpenAIChain
+#from langchain.schema import Function
 
 ##初期設定##
 load_dotenv()
 # OpenAIのモデルを使う設定
-lchain = OpenAIChain()
+#lchain = OpenAIChain()
 # APIクライアントの設定
 configuration = linebot.v3.messaging.Configuration(
     access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
