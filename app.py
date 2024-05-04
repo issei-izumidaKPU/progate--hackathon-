@@ -251,7 +251,7 @@ for user_id in get_user_ids():# ユーザーIDのリストを取得して要素�
 # データベースの更新->ユーザーの任意のタイミングで実行する
 def sqlite_update(USER_ID, NICKNAME, AGE, RESIDENCE, GRADE):
     conn = sqlite3.connect('instance/db.sqlite3')
-    cursor = conn.cusor()
+    cursor = conn.cursor()
     
     user_id = USER_ID
     nickname = NICKNAME
@@ -276,7 +276,7 @@ def sqlite_update(USER_ID, NICKNAME, AGE, RESIDENCE, GRADE):
 #user_idを集めたリストを取得
 def get_user_ids():
     # SQLite3データベースに接続
-    conn = sqlite3.connect('your_database.db')
+    conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cursor()
 
     try:
