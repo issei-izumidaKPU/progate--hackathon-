@@ -16,6 +16,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from gcs_client import CloudStorageManager
 # from . import MicrophoneStream
 from datetime import datetime
+from ocr import ocr
 
 load_dotenv()
 db = SQLAlchemy()
@@ -160,6 +161,28 @@ def chatGPTResponse(prompts, model, user_id, system_prompts=system_prompts, temp
     return response.choices[0].message['content'].strip()
 
 
+def chatGPTResponseFromImages(prompt):
+    response = openai.ChatCompletions.create(
+        model="gpt-3.5-turbo-16k-0613",
+        messages=[
+            {"role": "system", "content": "あなたは就活生をサポートする優秀な教師です"},
+            {"role": "system", "content": "あなたは送られてきた文章の文法的な間違いや、論理構造の欠陥を指摘して修正します"},
+            {"role": "system", "content": "さらに、文章の内容を補完して、より魅力的な文章に仕上げます"},
+            {"role": "system",
+                "content": "与えられた文章で、定量的でない発言や、抽象的意見がある場合は、具体性や数字を使った説明をしてください"},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3)
+    text = response.choices[0].message['content'].strip()
+    return text
+
+
+def send_encouragement_message():
+    user_id = "YOUR_USER_ID"  # ユーザーIDを設定
+    message = "おはようございます！新しい一日がんばりましょう！"  # 送るメッセージ
+    line_bot_api.push_message(user_id, TextSendMessage(text=message))
+
+
 def send_encouragement_message():
     user_id = "YOUR_USER_ID"  # ユーザーIDを設定
     message = "おはようございます！新しい一日がんばりましょう！"  # 送るメッセージ
@@ -265,6 +288,7 @@ def handle_postback(event):
         TextSendMessage(text=response_message)
     )
 
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     # ユーザーからのポストバックアクションを処理する
@@ -359,12 +383,12 @@ def handle_image(event):
     image = message_content.content
     # ユーザーに画像の受信完了を通知
     line_bot_api.push_message(user_id, TextSendMessage(text="画像の受信が完了しました。"))
-
-    # 画像からテキストを抽出
-
-    # GPTに渡してテキストを修正
-
-    # GPTに回答させる。
+    
+    #画像からテキストを抽出
+    ocr_text = ocr(image)
+    #GPTに渡してテキストを修正
+    chatGPTResponseFromImages(ocr_text)
+    #GPTに回答させる。
 
     # 画像ファイルをバケットに書き込み
     image_file_name = f"images/{user_id}.jpg"

@@ -26,23 +26,24 @@ credentials_dict = {
 credentials = service_account.Credentials.from_service_account_info(credentials_dict)
 client = vision.ImageAnnotatorClient(credentials=credentials)
 
-# ファイルの絶対パスを取得
-file_name = os.path.abspath('sample10.png')
-# ファイルを開く
-with io.open(file_name, 'rb') as image_file:
-    content = image_file.read()
+def ocr(image_path):
+    # ファイルの絶対パスを取得
+    file_name = os.path.abspath(image_path)
+    # ファイルを開く
+    with io.open(file_name, 'rb') as image_file:
+        content = image_file.read()
     
-# テキスト抽出
-image = vision.Image(content=content)
-response = client.text_detection(image=image)
-texts = response.text_annotations
+    # テキスト抽出
+    image = vision.Image(content=content)
+    response = client.text_detection(image=image)
+    texts = response.text_annotations
 
-if texts:
-    print(texts[0].description)
-else:
-    print("テキストは抽出されませんでした。")
+    if texts:
+        print(texts[0].description)
+    else:
+        print("テキストは抽出されませんでした。")
     
-# for text in texts:
-#     print(text.description)
-#     print(text.bounding_poly.vertices)
+    # for text in texts:
+    #     print(text.description)
+    #     print(text.bounding_poly.vertices)
     
