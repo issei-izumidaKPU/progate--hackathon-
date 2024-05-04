@@ -1,24 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>How to record audio using Web Audio API in JavaScript</title>
-  </head>
-  <body>
-    <h1>How to record audio using Web Audio API in JavaScript</h1>
-    <div>
-      <button type="button" id="buttonStart">Start</button>
-      <button type="button" id="buttonStop" disabled>Stop</button>
-    </div>
-    <div>
-      <audio controls id="audio"></audio>
-    </div>
-    <script src="{{ url_for('static', filename='js/encode-audio.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    <script type="module">
-      import { main } from "{{ url_for('static', filename='js/main.js') }}";
-      main();
-    </script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to record audio using Web Audio API in JavaScript</title>
+</head>
+<body>
+  <h1>How to record audio using Web Audio API in JavaScript</h1>
+  <div>
+    <button type="button" id="buttonStart">Start</button>
+    <button type="button" id="buttonStop" disabled>Stop</button>
+  </div>
+  <div>
+    <audio controls id="audio"></audio>
+  </div>
+  <!-- `type="module"`を使用してJavaScriptモジュールとして`main.js`を読み込む -->
+  <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
 </html>

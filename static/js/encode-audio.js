@@ -1,4 +1,4 @@
-function encodeAudio (buffers, settings) {
+export function encodeAudio (buffers, settings) {
     const sampleCount = buffers.reduce((memo, buffer) => {
       return memo + buffer.length
     }, 0)
