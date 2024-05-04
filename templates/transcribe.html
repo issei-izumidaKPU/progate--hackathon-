@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>How to record audio using Web Audio API in JavaScript</title>
   </head>
   <body>
@@ -14,7 +14,11 @@
     <div>
       <audio controls id="audio"></audio>
     </div>
-    <script src="encode-audio.js"></script>
-    <script src="main.js"></script>
+    <script src="{{ url_for('static', filename='js/encode-audio.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script type="module">
+      import { main } from "{{ url_for('static', filename='js/main.js') }}";
+      main();
+    </script>
   </body>
 </html>

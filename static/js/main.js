@@ -1,3 +1,4 @@
+import { encodeAudio } from './encode-audio.js';
 async function main () {
     try {
       const buttonStart = document.querySelector('#buttonStart')
@@ -54,4 +55,4 @@ async function main () {
     }
   }
   
-  main()
+  export { main };
