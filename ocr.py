@@ -26,16 +26,12 @@ class OCRClient:
         # ファイルの絶対パスを取得
         file_name = os.path.abspath(self.image_path)
         # ファイルを開く
+        file_name = file_name.replace('\0', '')
         with io.open(file_name, 'rb') as image_file:
             content = image_file.read()
         
         # テキスト抽出
         image = vision.Image(content=content)
         response = self.client.text_detection(image=image)
-        texts = response.text_annotations
-
-        if texts:
-            print(texts[0].description)
-        else:
-            print("テキストは抽出されませんでした。")
-    
+        return response.text_annotations
+        

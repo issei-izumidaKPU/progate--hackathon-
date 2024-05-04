@@ -380,22 +380,32 @@ def handle_image(event):
 
     # メッセージIDを元に画像ファイルを取得
     message_content = line_bot_api.get_message_content(message_id)
-    image = message_content.content
+    image_bytes = b''
+    for chunk in message_content.iter_content():
+        image_bytes += chunk
+
     # ユーザーに画像の受信完了を通知
     line_bot_api.push_message(user_id, TextSendMessage(text="画像の受信が完了しました。"))
-    ocr_client = OCRClient(image)
-    #画像からテキストを抽出
-    ocr_text = ocr_client.ocr()
-    #GPTに渡してテキストを修正
-    chatGPTResponseFromImages(ocr_text)
-    #GPTに回答させる。
+
+    # 画像ファイルを一時的に保存
+    temp_image_path = f"temp/{message_id}.jpg"
+    with open(temp_image_path, 'wb') as img_file:
+        img_file.write(image_bytes)
+
+    # OCRClientを使用して画像からテキストを抽出
+    ocr_client = OCRClient(temp_image_path)
+    ocr_result = ocr_client.ocr()
+    ocr_text = ocr_result[0].description if ocr_result else "テキストを検出できませんでした。"
+
+    # GPTに渡してテキストを修正
+    corrected_text = chatGPTResponseFromImages(ocr_text)
+
+    # ユーザーに修正されたテキストを送信
+    line_bot_api.push_message(user_id, TextSendMessage(text=corrected_text))
 
     # 画像ファイルをバケットに書き込み
-    image_file_name = f"images/{user_id}.jpg"
-    gcs_user_manager.upload_file(image_file_name, image)
-    app.logger.info(f"画像ファイル '{image_file_name}' をバケットに書き込みました。")
+    image_file_name = f"images/{user_id}/{message_id}.jpg"
+    gcs_user_manager.upload_file(image_file_name, image_bytes)
 
-    # 画像ファイルをGoogle Cloud Vision APIに送信して解析
-    vision_api_response = "この画像の特徴は次の通りです:\n"
-    line_bot_api.push_message(
-        user_id, TextSendMessage(text=vision_api_response))
+    # 一時ファイルを削除
+    os.remove(temp_image_path)
