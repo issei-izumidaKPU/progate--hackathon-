@@ -61,6 +61,9 @@
     <header>
         <div>MyPage</div>
         <div>teamブタ - {{ user_profile["name"] }}</div>
+        <h3>ユーザID:{{ user_profile["sub"][:5] }}...</h3>
+        <img style="border-radius:50%;width:200px;height: 200px" src="{{ user_profile['picture'] }}"/>
+
     </header>
     <div class="container">
         <h1>My Page</h1>
@@ -79,7 +82,7 @@
             </div>
         </div>
         <div class="link-box">
-            <a href="transcribe.html">面接練習はこちら</a>
+            <a href="/audio">面接練習はこちら</a>
         </div>
         <div class="link-box">
             <a href="analyze.html">ES添削はこちら</a>

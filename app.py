@@ -23,9 +23,13 @@ from gcs_client import CloudStorageManager
 from datetime import datetime
 import ocr as gcpapi
 from chat_gpt import chatGPTResponse, chatGPTResponseFromImages, chatGPTResponseFromGPT
+from langchain.chains import OpenAIChain
+from langchain.schema import Function
 
 ##初期設定##
 load_dotenv()
+# OpenAIのモデルを使う設定
+lchain = OpenAIChain()
 # APIクライアントの設定
 configuration = linebot.v3.messaging.Configuration(
     access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
@@ -69,12 +73,24 @@ openai.api_key = OPENAI_API_KEY
 gcs_user_manager = CloudStorageManager("user-backets")
 #user_status = "INITIAL"
 ##SQLite3データベース設定##
-def ensure_udatabase_exists(self, user_id):
-    # ユーザーIDが存在しない場合は新しいユーザーを追加
-    if not self.user_exists(user_id):
-        new_user = User(user_id=user_id)
-        db.session.add(new_user)
-        db.session.commit()
+def ensure_user_exists(user_id):
+    # データベースに接続
+    conn = sqlite3.connect('instance/db.sqlite3')
+    cursor = conn.cursor()
+    
+    # ユーザーが存在するか確認
+    cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+    user = cursor.fetchone()
+    
+    if user is None:
+        # ユーザーが存在しない場合、新しいユーザーを作成
+        cursor.execute("""
+            INSERT INTO users (user_id, nickname, age, residence, grade, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (user_id, "", 0, "", "", datetime.now(), datetime.now()))
+        conn.commit()
+    
+    conn.close()
 
 def sqlite_update(USER_ID, NICKNAME, AGE, RESIDENCE, GRADE):
     conn = sqlite3.connect('instance/db.sqlite3')
@@ -246,15 +262,19 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.route('/audio_file_upload', methods=['POST'])
+@app.route('/audio_file_upload/', methods=['POST'])
 def upload_audio():
     data_uri = request.form['record']
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    # 音声データをデータベースに保存
-    cursor.execute('INSERT INTO audio_records (data) VALUES (?)', (data_uri,))
-    conn.commit()
-    conn.close()
+    # Data URIからバイナリデータを抽出
+    header, encoded = data_uri.split(",", 1)
+    data = base64.b64decode(encoded)
+
+    # GCSにファイルをアップロード
+    user_id = 'default_user'  # 本来はユーザー認証から取得するユーザーIDを使用
+    file_path = f"{user_id}/{datetime.now().strftime('%Y%m%d%H%M%S')}.wav"
+    gcs_client = CloudStorageManager("user-audio")
+    gcs_client.upload_file(file_path, data, content_type='audio/wav')
+
     return '音声データを保存しました。', 200
 
 
