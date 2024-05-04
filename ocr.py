@@ -4,8 +4,7 @@ from google.cloud import vision
 from google.oauth2 import service_account
 
 class OCRClient:
-    def __init__(self, image_path):
-        self.image_path = image_path
+    def __init__(self):
         credentials_dict = {
             "type": os.getenv("TYPE"),
             "project_id": os.getenv("PROJECT_ID"),
@@ -22,16 +21,10 @@ class OCRClient:
         credentials = service_account.Credentials.from_service_account_info(credentials_dict)
         self.client = vision.ImageAnnotatorClient(credentials=credentials)
 
-    def ocr(self):
-        # ファイルの絶対パスを取得
-        file_name = os.path.abspath(self.image_path)
-        # ファイルを開く
-        file_name = file_name.replace('\0', '')
-        with io.open(file_name, 'rb') as image_file:
-            content = image_file.read()
-        
-        # テキスト抽出
-        image = vision.Image(content=content)
-        response = self.client.text_detection(image=image)
-        return response.text_annotations
-        
+def image_to_text(imagecontent):
+    client = OCRClient().client
+
+    image = vision.Image(content=imagecontent)
+    response = client.document_text_detection(image=image)#文字情報の取得
+
+    return response.full_text_annotation.text

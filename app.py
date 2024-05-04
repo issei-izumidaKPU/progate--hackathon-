@@ -16,7 +16,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from gcs_client import CloudStorageManager
 # from . import MicrophoneStream
 from datetime import datetime
-from ocr import OCRClient
+import ocr as gcpapi
 
 load_dotenv()
 db = SQLAlchemy()
@@ -176,11 +176,6 @@ def chatGPTResponseFromImages(prompt):
     text = response.choices[0].message['content'].strip()
     return text
 
-
-def send_encouragement_message():
-    user_id = "YOUR_USER_ID"  # ユーザーIDを設定
-    message = "おはようございます！新しい一日がんばりましょう！"  # 送るメッセージ
-    line_bot_api.push_message(user_id, TextSendMessage(text=message))
 
 
 def send_encouragement_message():
@@ -376,36 +371,15 @@ def handle_audio(event):
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
     user_id = event.source.user_id  # ユーザーのIDを取得
-    message_id = event.message.id  # メッセージのIDを取得
-
-    # メッセージIDを元に画像ファイルを取得
+    message_id = event.message.id
     message_content = line_bot_api.get_message_content(message_id)
-    image_bytes = b''
-    for chunk in message_content.iter_content():
-        image_bytes += chunk
-
+    res=gcpapi.image_to_text(message_content.content)#テキスト
     # ユーザーに画像の受信完了を通知
     line_bot_api.push_message(user_id, TextSendMessage(text="画像の受信が完了しました。"))
     
-    # 画像ファイルを一時的に保存
-    temp_image_path = f"temp/{message_id}.jpg"
-    with open(temp_image_path, 'wb') as img_file:
-        img_file.write(image_bytes)
-
-    # OCRClientを使用して画像からテキストを抽出
-    ocr_client = OCRClient(temp_image_path)
-    ocr_result = ocr_client.ocr()
-    ocr_text = ocr_result[0].description if ocr_result else "テキストを検出できませんでした。"
-
     # GPTに渡してテキストを修正
-    corrected_text = chatGPTResponseFromImages(ocr_text)
+    corrected_text = chatGPTResponseFromImages(res)
 
     # ユーザーに修正されたテキストを送信
     line_bot_api.push_message(user_id, TextSendMessage(text=corrected_text))
-
-    # 画像ファイルをバケットに書き込み
-    image_file_name = f"images/{user_id}/{message_id}.jpg"
-    gcs_user_manager.upload_file(image_file_name, image_bytes)
-
-    # 一時ファイルを削除
-    os.remove(temp_image_path)
+    
