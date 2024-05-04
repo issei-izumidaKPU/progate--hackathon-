@@ -202,6 +202,8 @@ scheduler.start()
 
 @app.route("/", methods=["GET"])
 def index():
+    LINE_CHANNEL_ID = os.getenv("LINE_CHANNEL_ID")
+    REDIRECT_URL = os.getenv("REDIRECT_URL")
     return render_template("index.html",
                            random_state="line1216",
                            channel_id=LINE_CHANNEL_ID,
@@ -210,6 +212,9 @@ def index():
 
 @app.route("/line/login", methods=["GET"])
 def line_login():
+    LINE_CHANNEL_ID = os.getenv("LINE_CHANNEL_ID")
+    REDIRECT_URL = os.getenv("REDIRECT_URL")
+    LINE_LOGIN_CHANNEL_SECRET = os.getenv("LINE_LOGIN_CHANNEL_SECRET")
     # 認可コードを取得する
     request_code = request.args["code"]
     uri_access_token = "https://api.line.me/oauth2/v2.1/token"
