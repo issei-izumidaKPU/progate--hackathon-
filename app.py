@@ -11,19 +11,20 @@ from flask import Flask, request, abort, render_template
 from flask_socketio import SocketIO, emit
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageMessage, AudioMessage, FollowEvent, ImageSendMessage
+from linebot.models import MessageEvent, TextMessage, ButtonsTemplate,  TemplateSendMessage, PostbackAction, TextSendMessage, ImageMessage, AudioMessage, FollowEvent, ImageSendMessage, PostbackEvent
 from apscheduler.schedulers.background import BackgroundScheduler
 from gcs_client import CloudStorageManager
-#from . import MicrophoneStream
+# from . import MicrophoneStream
 from datetime import datetime
 
 load_dotenv()
 db = SQLAlchemy()
 socketio = SocketIO()
 
+
 class User(db.Model):
     __tablename__ = 'users'
-    user_id = db.Column(db.Integer,primary_key=True)
+    user_id = db.Column(db.Integer, primary_key=True)
     nickname = db.Column(db.String(255), nullable=False)
     age = db.Column(db.Integer, nullable=False)
     residence = db.Column(db.String(255), nullable=False)
@@ -31,7 +32,8 @@ class User(db.Model):
     desired_jobs = db.Column(db.PickleType, nullable=False)
     brief_biography = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
-    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.now, onupdate=datetime.now)
 
 
 def create_app():
@@ -42,12 +44,13 @@ def create_app():
     socketio.init_app(app)  # 既存の socketio インスタンスに app を関連付ける
     migrate = Migrate(app, db)
     return app
-    
+
+
 app = create_app()
 
 if __name__ == "__main__":
     socketio.run(app, debug=True)
-    
+
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -59,20 +62,25 @@ gcs_user_manager = CloudStorageManager("user-backets")
 system_prompts = "You are an assistant skilled in programming, general knowledge, and tool usage advice. You provide helpful information for tasks in Line. And You must return messages in japanese."
 user_status = "INITIAL"
 
-#リアルタイム音声認識
+# リアルタイム音声認識
+
+
 @socketio.on('connect', namespace='/transcribe')
 def test_connect():
     emit('response', {'data': 'Connected'})
+
 
 @socketio.on('start_rec', namespace='/transcribe')
 def start_recording():
     # ここでspeech2text.pyの音声認識を開始
     pass
 
+
 @socketio.on('stop_rec', namespace='/transcribe')
 def stop_recording():
     # ここで音声認識を停止
     pass
+
 
 def listen_print_loop(responses):
     """Iterates through server responses and prints them.
@@ -165,13 +173,13 @@ scheduler.start()
 
 
 @app.route("/")
-#マイページ的なもの
+# マイページ的なもの
 def hello_world():
     return render_template("index.html")
 
 
 @app.route("/transcribe")
-#リアルタイム音声認譞
+# リアルタイム音声認譞
 def transcribe():
     return render_template("transcribe.html")
 
@@ -231,23 +239,62 @@ def handle_follow(event):
         user_id, TextSendMessage(text=service_description))
 
 
+@handler.add(PostbackEvent)
+def handle_postback(event):
+    user_id = event.source.user_id  # ユーザーのIDを取得
+    data = event.postback.data  # ポストバックデータを取得
+
+    # ポストバックデータを解析
+    action, info = data.split(':')
+    if action == "update":
+        field, value = info.split(',')
+        # ユーザー情報を更新
+        user = User.query.filter_by(user_id=user_id).first()
+        if user:
+            setattr(user, field, value)
+            db.session.commit()
+            response_message = f"{field}を更新しました。新しい値: {value}"
+        else:
+            response_message = "ユーザー情報が見つかりません。"
+    else:
+        response_message = "不明なアクションです。"
+
+    # ユーザーに応答メッセージを送信
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=response_message)
+    )
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    # ユーザーからのポストバックアクションを処理する
+    if event.message.text == "ボタン":
+        buttons_template = ButtonsTemplate(
+            title='あなたの選択', text='以下から選んでください', actions=[
+                PostbackAction(label='選択肢 1', data='action1'),
+                PostbackAction(label='選択肢 2', data='action2')
+            ]
+        )
+        template_message = TemplateSendMessage(
+            alt_text='Buttons alt text', template=buttons_template
+        )
+        line_bot_api.reply_message(event.reply_token, template_message)
     model = "gpt-3.5-turbo"
     if event.message.text == "GPT-4を使用する":
         model = "gpt-4-turbo"
     user_message = event.message.text  # ユーザーからのメッセージを取得
     user_id = event.source.user_id  # ユーザーのIDを取得
-    display_name = line_bot_api.get_profile(user_id).display_name# ユーザーの表示名を取得
+    display_name = line_bot_api.get_profile(
+        user_id).display_name  # ユーザーの表示名を取得
     gcs_client = CloudStorageManager("user-backets")
     gcs_client.ensure_user_storage(user_id)
-    gcs_client.writeChatHistory(user_id,"user",user_message)
+    gcs_client.writeChatHistory(user_id, "user", user_message)
     # ユーザーのメッセージを使用してレスポンスを生成
     response = chatGPTResponse(user_message, model, user_id)
     res = f"あなたのユーザーIDは{user_id}です。\n"
     res = f"{display_name}さん、こんにちは！\n"
     res += response
-    gcs_client.writeChatHistory(user_id,"system",response)
+    gcs_client.writeChatHistory(user_id, "system", response)
     # LINEユーザーにレスポンスを返信
     line_bot_api.reply_message(
         event.reply_token,
@@ -312,24 +359,19 @@ def handle_image(event):
     image = message_content.content
     # ユーザーに画像の受信完了を通知
     line_bot_api.push_message(user_id, TextSendMessage(text="画像の受信が完了しました。"))
-    
-    #画像からテキストを抽出
-    
-    #GPTに渡してテキストを修正
-    
-    #GPTに回答させる。
+
+    # 画像からテキストを抽出
+
+    # GPTに渡してテキストを修正
+
+    # GPTに回答させる。
 
     # 画像ファイルをバケットに書き込み
     image_file_name = f"images/{user_id}.jpg"
     gcs_user_manager.upload_file(image_file_name, image)
     app.logger.info(f"画像ファイル '{image_file_name}' をバケットに書き込みました。")
 
-    
-
     # 画像ファイルをGoogle Cloud Vision APIに送信して解析
     vision_api_response = "この画像の特徴は次の通りです:\n"
     line_bot_api.push_message(
         user_id, TextSendMessage(text=vision_api_response))
-
-
-
