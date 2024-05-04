@@ -291,9 +291,9 @@ def handle_message(event):
     try:
         # APIインスタンスの作成
         api_instance = linebot.v3.messaging.MessagingApi(api_client)
-        
+        chat_id = event.source.user_id
         # ローディングアニメーションの表示リクエストを送信
-        show_loading_animation_request = linebot.v3.messaging.ShowLoadingAnimationRequest()
+        show_loading_animation_request = linebot.v3.messaging.ShowLoadingAnimationRequest(chat_id=chat_id)
         api_instance.show_loading_animation(show_loading_animation_request)
         
         # 以下、メッセージ処理ロジック（省略）
