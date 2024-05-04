@@ -261,7 +261,7 @@ def handle_follow(event):
     line_bot_api.push_message(
         user_id, TextSendMessage(text=service_description))
 
-
+'''''
 @handler.add(PostbackEvent)
 def handle_postback(event):
     user_id = event.source.user_id  # ユーザーのIDを取得
@@ -287,7 +287,7 @@ def handle_postback(event):
         event.reply_token,
         TextSendMessage(text=response_message)
     )
-
+'''
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
