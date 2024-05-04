@@ -53,7 +53,7 @@
           fileReaderPost.addEventListener("load",function(event){
             let formTag=document.createElement('form');
             formTag.method="get";
-            formTag.action="post.php";//POST先URL
+            formTag.action="https://progate-hackathon-91edc03b70da.herokuapp.com/audio_file_upload";//POST先URL
             let inputTag=document.createElement('input');
             inputTag.type="hidden";
             inputTag.name="record";//POST時の名前

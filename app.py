@@ -12,7 +12,6 @@ from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask, request, abort, render_template,send_from_directory
-from flask_socketio import SocketIO, emit
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import MessageEvent, TextMessage, ButtonsTemplate,  TemplateSendMessage, PostbackAction, TextSendMessage, ImageMessage, AudioMessage, FollowEvent, ImageSendMessage, PostbackEvent
@@ -24,6 +23,8 @@ from gcs_client import CloudStorageManager
 from datetime import datetime
 import ocr as gcpapi
 from chat_gpt import chatGPTResponse, chatGPTResponseFromImages, chatGPTResponseFromGPT
+
+##初期設定##
 load_dotenv()
 # APIクライアントの設定
 configuration = linebot.v3.messaging.Configuration(
@@ -32,9 +33,6 @@ configuration = linebot.v3.messaging.Configuration(
 api_client = linebot.v3.messaging.ApiClient(configuration)
 
 db = SQLAlchemy()
-socketio = SocketIO()
-
-
 class User(db.Model):
     __tablename__ = 'users'
     user_id = db.Column(db.String(255), primary_key=True)
@@ -53,15 +51,11 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config["SECRET_KEY"] = "sample1216"
     db.init_app(app)
-    socketio.init_app(app)  # 既存の socketio インスタンスに app を関連付ける
     migrate = Migrate(app, db)
     return app
 
 
 app = create_app()
-
-if __name__ == "__main__":
-    socketio.run(app, debug=True)
 
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
@@ -73,8 +67,14 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 openai.api_key = OPENAI_API_KEY
 gcs_user_manager = CloudStorageManager("user-backets")
-user_status = "INITIAL"
-
+#user_status = "INITIAL"
+##SQLite3データベース設定##
+def ensure_udatabase_exists(self, user_id):
+    # ユーザーIDが存在しない場合は新しいユーザーを追加
+    if not self.user_exists(user_id):
+        new_user = User(user_id=user_id)
+        db.session.add(new_user)
+        db.session.commit()
 
 def sqlite_update(USER_ID, NICKNAME, AGE, RESIDENCE, GRADE):
     conn = sqlite3.connect('instance/db.sqlite3')
@@ -239,6 +239,24 @@ def audio():
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', )
+
+# データベース接続を設定
+def get_db_connection():
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+@app.route('/audio_file_upload', methods=['POST'])
+def upload_audio():
+    data_uri = request.form['record']
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # 音声データをデータベースに保存
+    cursor.execute('INSERT INTO audio_records (data) VALUES (?)', (data_uri,))
+    conn.commit()
+    conn.close()
+    return '音声データを保存しました。', 200
+
 
 @app.route("/get_uimages/<user_id>",methods=["GET"])
 def get_user_images(user_id):
