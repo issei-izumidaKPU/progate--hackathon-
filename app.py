@@ -233,12 +233,12 @@ def handle_follow(event):
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    display_name = line_bot_api.get_profile(user_id).display_name
     model = "gpt-3.5-turbo"
     if event.message.text == "GPT-4を使用する":
         model = "gpt-4-turbo"
     user_message = event.message.text  # ユーザーからのメッセージを取得
     user_id = event.source.user_id  # ユーザーのIDを取得
+    display_name = line_bot_api.get_profile(user_id).display_name# ユーザーの表示名を取得
     gcs_client = CloudStorageManager("user-backets")
     gcs_client.ensure_user_storage(user_id)
     gcs_client.writeChatHistory(user_id,"user",user_message)
