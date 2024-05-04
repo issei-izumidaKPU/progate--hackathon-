@@ -1,27 +1,89 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>マイページ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Page</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f4f4f9;
+            font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
-            color: #333;
+            padding: 0;
+            background-color: #f4f4f4;
         }
         header {
-            background: #005f73;
+            background-color: #333;
             color: #fff;
-            padding: 10px 20px;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .images-container {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .images-container img {
+            margin: 10px;
+            max-width: 200px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .link-box {
+            margin-top: 20px;
             text-align: center;
+            padding: 20px;
+            background-color: #ddd;
+            border-radius: 5px;
+        }
+        .link-box a {
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+            font-size: 18px;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>音声認識サンプル</h1>
+        <div>MyPage</div>
+        <div>teamブタ - ユーザー名</div>
     </header>
+    <div class="container">
+        <h1>My Page</h1>
+        <h2>就活に役立つ情報はこちら</h2>
+        <div class="images-container">
+            <table>
+            <tr><a href="https://progate.connpass.com/event/316571/"><img src="https://media.connpass.com/thumbs/7f/f6/7ff63af4d17da3f54c4a8dc1b1382f96.png"></a></tr>
+            <tr><a href="https://progate.connpass.com/event/317639/"><img src="https://media.connpass.com/thumbs/bc/09/bc096a949681370e90134b6f9e788d62.png" alt="Job Search Image"></a></tr>
+        </table>
+        </div>
+        <h2>アップロードした画像</h2>
+            <div class="images-container">
+                {% for image_url in image_urls %}
+                    <img src="{{ image_url }}" alt="Uploaded Image">
+                {% endfor %}
+            </div>
+        </div>
+        <div class="link-box">
+            <a href="transcribe.html">面接練習はこちら</a>
+        </div>
+        <div class="link-box">
+            <a href="analyze.html">ES添削はこちら</a>
+        </div>
+    </div>
 </body>
 </html>

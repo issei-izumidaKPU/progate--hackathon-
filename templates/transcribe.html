@@ -1,14 +1,36 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>リアルタイム音声認識</title>
-</head>
-<body>
-<h1>Google Speech-to-Text API デモ</h1>
-<button id="start">開始</button>
-<button id="stop" disabled>停止</button>
-<p id="transcript">認識結果がここに表示されます。</p>
-<script src="app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <title>リアルタイム音声認識</title>
+    <script src="https://cdn.socket.io/socket.io-3.1.3.js"></script>
+    <script>
+      var socket = io.connect(
+        "http://" + document.domain + ":" + location.port + "/transcribe"
+      );
+
+      socket.on("connect", function () {
+        console.log("Connected!");
+      });
+
+      socket.on("response", function (data) {
+        document.getElementById("transcript").textContent = data.data;
+      });
+
+      document.getElementById("start").onclick = function () {
+        socket.emit("start_rec");
+      };
+
+      document.getElementById("stop").onclick = function () {
+        socket.emit("stop_rec");
+      };
+    </script>
+  </head>
+  <body>
+    <h1>Google Speech-to-Text API デモ</h1>
+    <button id="start">開始</button>
+    <button id="stop" disabled>停止</button>
+    <p id="transcript">認識結果がここに表示されます。</p>
+    <script src="app.js"></script>
+  </body>
 </html>
