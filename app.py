@@ -234,22 +234,67 @@ def get_user_ids():
         # データベース接続を閉じる
         conn.close()
 
-def send_encouragement_message():
-    user_id = "YOUR_USER_ID"  # ユーザーIDを設定
+# メッセージの送信
+def send_encouragement_message(USER_ID):
+    user_id = USER_ID  # ユーザーIDを設定
     message = "おはようございます！新しい一日がんばりましょう！"  # 送るメッセージ
     line_bot_api.push_message(user_id, TextSendMessage(text=message))
 
-
-#SQLからユーザーIDの一覧を取得
-user_ids = get_user_ids()
-
-
+# スケジューラの設定
 scheduler = BackgroundScheduler()
-#ユーザーIDごとにエンカレッジメントメッセージを送信
-for user_id in user_ids:
-    scheduler.add_job(send_encouragement_message(), 'cron',
-                  hour=9, minute=0)  # 毎日9時0分に実行
+
+for user_id in get_user_ids():# ユーザーIDのリストを取得して要素毎にメッセージを送信
+    scheduler.add_job(send_encouragement_message(user_id), 'cron',
+                  hour=22, minute=10)  # 毎日22時10分に実行
     scheduler.start()
+
+# データベースの更新->ユーザーの任意のタイミングで実行する
+def sqlite_update(USER_ID, NICKNAME, AGE, RESIDENCE, GRADE):
+    conn = sqlite3.connect('instance/db.sqlite3')
+    cursor = conn.cusor()
+    
+    user_id = USER_ID
+    nickname = NICKNAME
+    age = AGE
+    residence = RESIDENCE
+    grade = GRADE
+    
+    # SQLインジェクション対策
+    update_query = """
+        UPDATE users
+        SET nickname = ?,
+            age = ?,
+            residence = ?,
+            grade = ?
+        WHERE user_id = ?
+    """
+    
+    cursor.execute(update_query, (nickname, age, residence, grade, user_id))
+    conn.commit()
+    conn.close()
+    
+#user_idを集めたリストを取得
+def get_user_ids():
+    # SQLite3データベースに接続
+    conn = sqlite3.connect('your_database.db')
+    cursor = conn.cursor()
+
+    try:
+        # ユーザーIDの一覧を取得するSQLクエリ
+        select_query = """
+            SELECT user_id
+            FROM users
+        """
+        
+        # SQLクエリを実行し、結果を取得
+        cursor.execute(select_query)
+        user_ids = [row[0] for row in cursor.fetchall()]  # ユーザーIDの一覧を取得
+        
+        return user_ids
+
+    finally:
+        # データベース接続を閉じる
+        conn.close()
 
 
 
