@@ -224,7 +224,6 @@ def callback():
 def test_gcs_connection():
     return gcs_user_manager.test_connection()
 
-
 @handler.add(FollowEvent)
 def handle_follow(event):
     user_id = event.source.user_id  # ユーザーのIDを取得
@@ -242,7 +241,7 @@ def handle_follow(event):
     db.session.add(new_user)
     db.session.commit()
     # ユーザーIDをログに記録
-    app.logger.info(f"新しいユーザーが追加されました: {new_user.id}")
+    app.logger.info(f"新しいユーザーが追加されました: {new_user.user_id}")  # 修正された行
     # ユーザーに歓迎メッセージを送信
     welcome_message = "ようこそ！私たちのサービスへ。まずは以下のフォーマットに従って自己紹介をお願いします。\n自己紹介: \n ニックネーム：\n年齢：\n居住地：\n学年：\n希望職種：\n簡単な経歴：\n"
     line_bot_api.push_message(user_id, TextSendMessage(text=welcome_message))
@@ -251,6 +250,7 @@ def handle_follow(event):
     service_description = "こちらで写真や音声の保存が可能です。また、質問に答えることでより良いサービスを提供します。"
     line_bot_api.push_message(
         user_id, TextSendMessage(text=service_description))
+
 
 @handler.add(PostbackEvent)
 def handle_postback(event):
