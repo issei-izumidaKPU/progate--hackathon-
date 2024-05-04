@@ -25,13 +25,11 @@ socketio = SocketIO()
 
 class User(db.Model):
     __tablename__ = 'users'
-    user_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(255), primary_key=True)
     nickname = db.Column(db.String(255), nullable=False)
     age = db.Column(db.Integer, nullable=False)
     residence = db.Column(db.String(255), nullable=False)
     grade = db.Column(db.String(255), nullable=False)
-    desired_jobs = db.Column(db.PickleType, nullable=False)
-    brief_biography = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(
         db.DateTime, default=datetime.now, onupdate=datetime.now)
@@ -240,8 +238,6 @@ def handle_follow(event):
         age=0,
         residence="未設定",
         grade="未設定",
-        desired_jobs=[],
-        brief_biography=""
     )
     db.session.add(new_user)
     db.session.commit()
