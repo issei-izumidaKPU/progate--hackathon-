@@ -16,7 +16,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from gcs_client import CloudStorageManager
 # from . import MicrophoneStream
 from datetime import datetime
-from ocr import ocr
+from ocr import OCRClient
 
 load_dotenv()
 db = SQLAlchemy()
@@ -383,9 +383,9 @@ def handle_image(event):
     image = message_content.content
     # ユーザーに画像の受信完了を通知
     line_bot_api.push_message(user_id, TextSendMessage(text="画像の受信が完了しました。"))
-    
+    ocr_client = OCRClient(image)
     #画像からテキストを抽出
-    ocr_text = ocr(image)
+    ocr_text = ocr_client.ocr(image)
     #GPTに渡してテキストを修正
     chatGPTResponseFromImages(ocr_text)
     #GPTに回答させる。
