@@ -162,7 +162,7 @@ def chatGPTResponse(prompts, model, user_id, system_prompts=system_prompts, temp
 
 
 def chatGPTResponseFromImages(prompt):
-    response = openai.ChatCompletions.create(
+    response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-16k-0613",
         messages=[
             {"role": "system", "content": "あなたは就活生をサポートする優秀な教師です"},
@@ -382,4 +382,3 @@ def handle_image(event):
 
     # ユーザーに修正されたテキストを送信
     line_bot_api.push_message(user_id, TextSendMessage(text=corrected_text))
-    
