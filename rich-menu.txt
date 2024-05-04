@@ -21,7 +21,7 @@ curl -v -X POST https://api.line.me/v2/bot/richmenu \
             "action": {
                 "type": "message",
                 "label": "タップ領域A",
-                "uri": "GPT-4を使用する"
+                "text": "GPT-4を使用する"
             }
         },
         {
@@ -47,16 +47,18 @@ curl -v -X POST https://api.line.me/v2/bot/richmenu \
             "action": {
                 "type": "uri",
                 "label": "タップ領域C",
-                "uri": "https://techblog.lycorp.co.jp/ja/"
+                "uri": "https://progate-hackathon-91edc03b70da.herokuapp.com/transcribe"
             }
         }
     ]
 }'
 
-curl -v -X POST https://api-data.line.me/v2/bot/richmenu/{richmenu-abf4ac1639ab243bbf6b72b36e0b7f82}/content \
+richmenu-id:richmenu-f7f57400b5041cec5e17b2bd774097b5
+
+curl -v -X POST https://api-data.line.me/v2/bot/richmenu/{richmenu-f7f57400b5041cec5e17b2bd774097b5}/content \
 -H "Authorization: Bearer {G/GWajx/dWCMiTnd8NYQuthmw9MZxenLJHOfJys515rjFaYy32FuA1GZQY3TRFh2XCRB3987ekmDBHmfv4StheSuWQKtzIHKR4feBbUQ6AYO6CWgnDpm3Ce8iWkbHnfmRA4c0WpQd/yL8k0nmU2a3AdB04t89/1O/w1cDnyilFU=}" \
 -H "Content-Type: image/png" \
 -T richmenu-template-guide-04.png
 
-curl -v -X POST https://api.line.me/v2/bot/user/all/richmenu/{richmenu-abf4ac1639ab243bbf6b72b36e0b7f82} \
+curl -v -X POST https://api.line.me/v2/bot/user/all/richmenu/{richmenu-f7f57400b5041cec5e17b2bd774097b5} \
 -H "Authorization: Bearer {G/GWajx/dWCMiTnd8NYQuthmw9MZxenLJHOfJys515rjFaYy32FuA1GZQY3TRFh2XCRB3987ekmDBHmfv4StheSuWQKtzIHKR4feBbUQ6AYO6CWgnDpm3Ce8iWkbHnfmRA4c0WpQd/yL8k0nmU2a3AdB04t89/1O/w1cDnyilFU=}"
