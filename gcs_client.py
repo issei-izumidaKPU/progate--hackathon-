@@ -80,15 +80,15 @@ class CloudStorageManager:
         self.upload_file(history_file_path, initial_history_content)
         
     def writeChatHistory(self, user_id, role, message):
-        history_file_path = f"{user_id}history.txt"
-        history = self.download_file(history_file_path)
+        history_file_path = f"{user_id}/history.txt"
+        history = self.download_file(history_file_path).decode('utf-8')
         prefix = "User:" if role == "user" else "Assistant:"
         history += f"{prefix} {message}\n"
-        self.upload_file(history_file_path, history)
+        self.upload_file(history_file_path, history.encode('utf-8'), content_type='text/plain; charset=utf-8')
         
     def readChatHistory(self, user_id):
         history_file_path = f"{user_id}/history.txt"
-        history_content = self.download_file(history_file_path)
+        history_content = self.download_file(history_file_path).decode('utf-8')
         # 履歴を改行で分割し、最後の5行だけを取得
         history_lines = history_content.split('\n')
         last_five_conversations = '\n'.join(history_lines[-6:-1])  # 最後の5行を取得（-1は最後の空行を除外するため）

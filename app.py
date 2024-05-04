@@ -256,7 +256,6 @@ def handle_follow(event):
     line_bot_api.push_message(
         user_id, TextSendMessage(text=service_description))
 
-'''''
 @handler.add(PostbackEvent)
 def handle_postback(event):
     user_id = event.source.user_id  # ユーザーのIDを取得
@@ -282,7 +281,6 @@ def handle_postback(event):
         event.reply_token,
         TextSendMessage(text=response_message)
     )
-'''
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -373,7 +371,8 @@ def handle_image(event):
     user_id = event.source.user_id  # ユーザーのIDを取得
     message_id = event.message.id
     message_content = line_bot_api.get_message_content(message_id)
-    res=gcpapi.image_to_text(message_content.content)#テキスト
+    image = message_content.content
+    res=gcpapi.image_to_text(image)
     # ユーザーに画像の受信完了を通知
     line_bot_api.push_message(user_id, TextSendMessage(text="画像の受信が完了しました。"))
     
@@ -382,3 +381,9 @@ def handle_image(event):
 
     # ユーザーに修正されたテキストを送信
     line_bot_api.push_message(user_id, TextSendMessage(text=corrected_text))
+
+    # ユーザーのIDとメッセージをGoogle Cloud Storageに保存
+    gcs_client = CloudStorageManager("user-backets")
+    gcs_client.ensure_user_storage(user_id)
+    gcs_client.upload_file(f"{user_id}/images/{message_id}.txt", image, content_type='image/jpeg')
+    gcs_client.writeChatHistory(user_id, "asssytant", corrected_text)
