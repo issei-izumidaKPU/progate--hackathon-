@@ -386,7 +386,7 @@ def handle_image(event):
 
     # ユーザーに画像の受信完了を通知
     line_bot_api.push_message(user_id, TextSendMessage(text="画像の受信が完了しました。"))
-
+    
     # 画像ファイルを一時的に保存
     temp_image_path = f"temp/{message_id}.jpg"
     with open(temp_image_path, 'wb') as img_file:
