@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 import os
-import jwt
+import jwt as pyjwt
 import requests
 import json
 import openai
@@ -233,7 +233,7 @@ def line_login():
     line_id_token = json.loads(response_post.text)["id_token"]
 
     # ペイロード部分をデコードすることで、ユーザ情報を取得する
-    decoded_id_token = jwt.decode(line_id_token,
+    decoded_id_token = pyjwt.decode(line_id_token,
                                   LINE_LOGIN_CHANNEL_SECRET,
                                   audience=LINE_CHANNEL_ID,
                                   issuer='https://access.line.me',
