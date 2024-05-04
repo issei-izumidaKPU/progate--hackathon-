@@ -15,7 +15,6 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageMess
 from apscheduler.schedulers.background import BackgroundScheduler
 from gcs_client import CloudStorageManager
 #from . import MicrophoneStream
-import pyaudio
 from datetime import datetime
 
 load_dotenv()
