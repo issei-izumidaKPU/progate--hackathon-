@@ -385,7 +385,7 @@ def handle_image(event):
     line_bot_api.push_message(user_id, TextSendMessage(text="画像の受信が完了しました。"))
     ocr_client = OCRClient(image)
     #画像からテキストを抽出
-    ocr_text = ocr_client.ocr(image)
+    ocr_text = ocr_client.ocr()
     #GPTに渡してテキストを修正
     chatGPTResponseFromImages(ocr_text)
     #GPTに回答させる。
