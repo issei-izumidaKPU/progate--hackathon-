@@ -3,13 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <title>ログイン</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif; /* フォントを指定 */
+            margin: 0; /* マージンをリセット */
+            padding: 0; /* パディングをリセット */
+            display: flex; /* Flexboxを使用して中央寄せ */
+            justify-content: center; /* 横方向中央寄せ */
+            align-items: center; /* 縦方向中央寄せ */
+            height: 100vh; /* 画面の高さいっぱいに設定 */
+            background-color: #f0f0f0; /* 背景色を指定 */
+        }
+
+        h2 {
+            font-size: 32px; /* フォントサイズを指定 */
+            color: #333; /* テキストカラーを指定 */
+            margin-bottom: 20px; /* 下の余白を指定 */
+        }
+
+        .login-button {
+            text-decoration: none; /* リンクの下線をなしに */
+            display: inline-block; /* インラインブロック要素に変更 */
+            background-color: #00C300; /* ボタンの背景色を指定 */
+            color: #fff; /* ボタンのテキストカラーを指定 */
+            padding: 15px 30px; /* パディングを指定 */
+            border-radius: 8px; /* ボーダーの角を丸める */
+            transition: background-color 0.3s; /* ホバー時のトランジションを指定 */
+            font-size: 20px; /* ボタンのフォントサイズを指定 */
+        }
+
+        .login-button:hover {
+            background-color: #008000; /* ホバー時の背景色を指定 */
+        }
+    </style>
 </head>
 <body>
 
-<h2>ログイン</h2>
+<div class="container">
+    <h2>ログインしてください</h2>
 
-<a href="https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id={{ channel_id }}&redirect_uri={{ redirect_url }}&state={{ random_state }}&scope=openid%20profile">
-    <img src="{{ url_for('static', filename='LineLoginButtonImage/images/DeskTop/2x/32dp/btn_login_base.png') }}"></a>
+    <a class="login-button" href="https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id={{ channel_id }}&redirect_uri={{ redirect_url }}&state={{ random_state }}&scope=openid%20profile">
+        <img src="../static/Line_Login_Button_Image/images/DeskTop/2x/32dp/btn_login_base.png"></a>
+</div>
 
 </body>
 </html>

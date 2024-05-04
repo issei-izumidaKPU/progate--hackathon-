@@ -23,6 +23,7 @@ from gcs_client import CloudStorageManager
 # from . import MicrophoneStream
 from datetime import datetime
 import ocr as gcpapi
+from chat_gpt import chatGPTResponse, chatGPTResponseFromImages
 load_dotenv()
 # APIクライアントの設定
 configuration = linebot.v3.messaging.Configuration(
@@ -72,82 +73,7 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 openai.api_key = OPENAI_API_KEY
 gcs_user_manager = CloudStorageManager("user-backets")
-system_prompts = "You are an assistant skilled in programming, general knowledge, and tool usage advice. You provide helpful information for tasks in Line. And You must return messages in japanese."
 user_status = "INITIAL"
-
-# リアルタイム音声認識
-
-
-@socketio.on('connect', namespace='/transcribe')
-def test_connect():
-    emit('response', {'data': 'Connected'})
-
-
-@socketio.on('start_rec', namespace='/transcribe')
-def start_recording():
-    # ここでspeech2text.pyの音声認識を開始
-    pass
-
-
-@socketio.on('stop_rec', namespace='/transcribe')
-def stop_recording():
-    # ここで音声認識を停止
-    pass
-
-
-def listen_print_loop(responses):
-    """Iterates through server responses and prints them.
-
-    The responses passed is a generator that will block until a response
-    is provided by the server.
-
-    Each response may contain multiple results, and each result may contain
-    multiple alternatives; for details, see https://goo.gl/tjCPAU.  Here we
-    print only the transcription for the top alternative of the top result.
-
-    In this case, responses are provided for interim results as well. If the
-    response is an interim one, print a line feed at the end of it, to allow
-    the next result to overwrite it, until the response is a final one. For the
-    final one, print a newline to preserve the finalized transcription.
-    """
-    num_chars_printed = 0
-    for response in responses:
-        if not response.results:
-            continue
-
-        # The `results` list is consecutive. For streaming, we only care about
-        # the first result being considered, since once it's `is_final`, it
-        # moves on to considering the next utterance.
-        result = response.results[0]
-        if not result.alternatives:
-            continue
-
-        # Display the transcription of the top alternative.
-        transcript = result.alternatives[0].transcript
-
-        # Display interim results, but with a carriage return at the end of the
-        # line, so subsequent lines will overwrite them.
-        #
-        # If the previous result was longer than this one, we need to print
-        # some extra spaces to overwrite the previous result
-        overwrite_chars = " " * (num_chars_printed - len(transcript))
-
-        if not result.is_final:
-            sys.stdout.write(transcript + overwrite_chars + "\r")
-            sys.stdout.flush()
-
-            num_chars_printed = len(transcript)
-
-        else:
-            print(transcript + overwrite_chars)
-
-            # Exit recognition if any of the transcribed phrases could be
-            # one of our keywords.
-            if re.search(r"\b(exit|quit)\b", transcript, re.I):
-                print("Exiting..")
-                break
-
-            num_chars_printed = 0
 
 
 def chatGPTResponse(prompts, model, user_id, system_prompts=system_prompts, temperature=0.5):
