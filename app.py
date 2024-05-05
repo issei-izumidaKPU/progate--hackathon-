@@ -24,7 +24,7 @@ from gcs_client import CloudStorageManager
 # from . import MicrophoneStream
 from datetime import datetime, timedelta
 import ocr as gcpapi
-from chat_gpt import chatGPTResponse, chatGPTResponseFromImages, ESAdviceGPT
+from llm import chatGPTResponse, formatTextFromImage, ESAdviceGPT
 # from langchain.chains import OpenAIChain
 # from langchain.schema import Function
 
@@ -39,17 +39,6 @@ configuration = linebot.v3.messaging.Configuration(
 api_client = linebot.v3.messaging.ApiClient(configuration)
 
 db = SQLAlchemy()
-
-
-class User(db.Model):
-    __tablename__ = 'users'
-    user_id = db.Column(db.String(255), primary_key=True)
-    nickname = db.Column(db.String(255), nullable=False)
-    model = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now)
-    updated_at = db.Column(
-        db.DateTime, default=datetime.now, onupdate=datetime.now)
-
 
 def create_app():
     app = Flask(__name__,static_folder='static')
@@ -96,19 +85,39 @@ def ensure_user_exists(user_id, nickname):
 
     conn.close()
 
+class User(db.Model):
+    __tablename__ = 'users'
+    user_id = db.Column(db.String(255), primary_key=True)
+    nickname = db.Column(db.String(255), nullable=False)
+    model = db.Column(db.String(255), nullable=False)
+    age = db.Column(db.Integer, nullable=True)
+    liberal = db.Column(db.Boolean, nullable=True)
+    residence = db.Column(db.String(255), nullable=True)
+    info = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.now, onupdate=datetime.now)
 
-def sqlite_update(USER_ID, NICKNAME, MODEL):
+def sqlite_update(USER_ID, NICKNAME, MODEL, AGE, LIBERAL, RESIDENCE, INFO):
     conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cusor()
 
     user_id = USER_ID
     nickname = NICKNAME
     model = MODEL
+    age = AGE
+    liberal = LIBERAL
+    residence = RESIDENCE
+    info = INFO
     # SQLインジェクション対策
     update_query = """
         UPDATE users
         SET nickname = ?,
-            model = ?
+            model = ?,
+            age = ?,
+            liberal = ?,
+            residence = ?,
+            info = ?
         WHERE user_id = ?
     """
 
@@ -177,7 +186,7 @@ def sqlite_update(USER_ID, NICKNAME, MODEL):
     conn.close()
 
 
-def changeGPTModel(USER_ID):
+def changeLLMModel(USER_ID):
     conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cursor()
 
@@ -194,7 +203,7 @@ def changeGPTModel(USER_ID):
     conn.close()
 
 
-def getGPTModel(USER_ID):
+def getLLMModel(USER_ID):
     conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cursor()
 
@@ -428,11 +437,26 @@ def handle_message(event):
         show_loading_animation_request = linebot.v3.messaging.ShowLoadingAnimationRequest(
             chat_id=chat_id)
         api_instance.show_loading_animation(show_loading_animation_request)
-        if event.message.text == "ボタン":
+        if event.message.text == "他のモデルを使用する":
+            line_bot_api.push_message(user_id, TextSendMessage(text="変更先のモデルを指定して下さい"))
+            if event.message.text == "gpt3.5":
+                changeLLMModel(event.source.user_id, "gpt3.5-turbo")
+                line_bot_api.push_message(user_id, TextSendMessage(text="GPT-3.5を使用します。"))
+            elif event.message.text == "gpt4":
+                changeLLMModel(event.source.user_id, "gpt-4-turbo")
+                line_bot_api.push_message(user_id, TextSendMessage(text="GPT-4を使用します。"))
+            elif event.message.text == "gemini":
+                changeLLMModel(event.source.user_id, "gemini-pro") 
+                line_bot_api.push_message(user_id, TextSendMessage(text="Geminiを使用します。"))
+            else:
+                line_bot_api.push_message(user_id, TextSendMessage(text="モデルの指定が不正です。"))
+            return
+        if event.message.text == "他のモデルを使用する":
             buttons_template = ButtonsTemplate(
                 title='あなたの選択', text='以下から選んでください', actions=[
                     PostbackAction(label='gpt3.5を使用する', data='update:model,gpt3.5-turbo'),
-                    PostbackAction(label='gpt4を使用する', data='update:model,gpt4-turbo')
+                    PostbackAction(label='gpt4を使用する', data='update:model,gpt4-turbo'),
+                    PostbackAction(label='Gemini1.0を使用する', data='update:model,gemini1.0-turbo')
                 ]
             )
             template_message = TemplateSendMessage(
@@ -443,11 +467,8 @@ def handle_message(event):
         user_id = event.source.user_id  # ユーザーのIDを取得
         display_name = line_bot_api.get_profile(user_id).display_name  # ユーザーの表示名を取得
         ensure_user_exists(user_id, display_name)
-        model = getGPTModel(event.source.user_id)
-        if event.message.text == "GPT-4を使用する":
-            changeGPTModel(event.source.user_id)
-            model = "gpt-4"
-            line_bot_api.push_message(user_id, TextSendMessage(text="GPT-4を使用します。"))
+        model = getLLMModel(event.source.user_id)
+        
         gcs_client = CloudStorageManager("user-backets")
         gcs_client.ensure_user_storage(user_id)
         gcs_client.writeChatHistory(user_id, "user", user_message)
@@ -456,7 +477,7 @@ def handle_message(event):
         res = f"あなたのユーザーIDは{user_id}です。\n"
         res += f"{display_name}さん、こんにちは！\n"
         res += f"現在のモデルは{model}です。\n"
-        res +=f"SQLから取得したモデルは{getGPTModel(event.source.user_id)}です。\n"
+        res +=f"SQLから取得したモデルは{getLLMModel(event.source.user_id)}です。\n"
         res += GPTresponse
         gcs_client.writeChatHistory(user_id, "system", GPTresponse)
         # LINEユーザーにレスポンスを返信
@@ -537,7 +558,7 @@ def handle_image(event):
     line_bot_api.push_message(user_id, TextSendMessage(text="画像の受信が完了しました。"))
 
     # GPTに渡してテキストを修正
-    corrected_text = chatGPTResponseFromImages(res)
+    corrected_text = formatTextFromImage(res)
 
     # ユーザーに修正されたテキストを送信
     line_bot_api.push_message(user_id, TextSendMessage(text=corrected_text))
