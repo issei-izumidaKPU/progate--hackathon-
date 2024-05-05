@@ -42,9 +42,6 @@ class User(db.Model):
     __tablename__ = 'users'
     user_id = db.Column(db.String(255), primary_key=True)
     nickname = db.Column(db.String(255), nullable=False)
-    age = db.Column(db.Integer, nullable=False)
-    residence = db.Column(db.String(255), nullable=False)
-    grade = db.Column(db.String(255), nullable=False)
     model = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(
@@ -75,7 +72,7 @@ openai.api_key = OPENAI_API_KEY
 gcs_user_manager = CloudStorageManager("user-backets")
 #user_status = "INITIAL"
 ##SQLite3データベース設定##
-def ensure_user_exists(user_id):
+def ensure_user_exists(user_id,nickname):
     # データベースに接続
     conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cursor()
@@ -87,34 +84,29 @@ def ensure_user_exists(user_id):
     if user is None:
         # ユーザーが存在しない場合、新しいユーザーを作成
         cursor.execute("""
-            INSERT INTO users (user_id, nickname, age, residence, grade, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (user_id, "", 0, "", "", datetime.now(), datetime.now()))
+            INSERT INTO users (user_id, nickname, model,created_at, updated_at)
+            VALUES (?, ?, ?, ?, ? )
+        """, (user_id, "", "gpt3.5-turbo", datetime.now(), datetime.now()))
         conn.commit()
     
     conn.close()
 
-def sqlite_update(USER_ID, NICKNAME, AGE, RESIDENCE, GRADE):
+def sqlite_update(USER_ID, NICKNAME, MODEL):
     conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cusor()
     
     user_id = USER_ID
     nickname = NICKNAME
-    age = AGE
-    residence = RESIDENCE
-    grade = GRADE
-    
+    model = MODEL
     # SQLインジェクション対策
     update_query = """
         UPDATE users
         SET nickname = ?,
-            age = ?,
-            residence = ?,
-            grade = ?
+            model = ?
         WHERE user_id = ?
     """
     
-    cursor.execute(update_query, (nickname, age, residence, grade, user_id))
+    cursor.execute(update_query, (nickname, model,user_id))
     conn.commit()
     conn.close()
     
@@ -155,28 +147,23 @@ for user_id in get_user_ids():# ユーザーIDのリストを取得して要素�
     scheduler.start()
 
 # データベースの更新->ユーザーの任意のタイミングで実行する
-def sqlite_update(USER_ID, NICKNAME, AGE, RESIDENCE, GRADE):
+def sqlite_update(USER_ID, NICKNAME, MODEL):
     conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cursor()
     
     user_id = USER_ID
     nickname = NICKNAME
-    age = AGE
-    residence = RESIDENCE
-    grade = GRADE
+    model = MODEL
     
     # SQLインジェクション対策
     update_query = """
         UPDATE users
         SET nickname = ?,
-            age = ?,
-            residence = ?,
-            grade = ?
             model = ?
         WHERE user_id = ?
     """
     
-    cursor.execute(update_query, (nickname, age, residence, grade, user_id))
+    cursor.execute(update_query, (nickname,model, user_id))
     conn.commit()
     conn.close()
 
@@ -400,8 +387,7 @@ def handle_message(event):
         show_loading_animation_request = linebot.v3.messaging.ShowLoadingAnimationRequest(
             chat_id=chat_id)
         api_instance.show_loading_animation(show_loading_animation_request)
-
-        # 以下、メッセージ処理ロジック（省略）
+        '''
         # ユーザーからのポストバックアクションを処理する
         if event.message.text == "ボタン":
             buttons_template = ButtonsTemplate(
@@ -414,6 +400,8 @@ def handle_message(event):
                 alt_text='Buttons alt text', template=buttons_template
             )
             line_bot_api.reply_message(event.reply_token, template_message)
+        '''
+        
         model = getGPTModel(event.source.user_id)
         if event.message.text == "GPT-4を使用する":
             changeGPTModel(event.source.user_id)
