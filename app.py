@@ -23,7 +23,7 @@ from gcs_client import CloudStorageManager
 # from . import MicrophoneStream
 from datetime import datetime
 import ocr as gcpapi
-from chat_gpt import chatGPTResponse, chatGPTResponseFromImages, chatGPTResponseFromGPT
+from chat_gpt import chatGPTResponse, chatGPTResponseFromImages, ESAdviceGPT
 # from langchain.chains import OpenAIChain
 # from langchain.schema import Function
 
@@ -423,7 +423,8 @@ def handle_message(event):
         user_message = event.message.text  # ユーザーからのメッセージを取得
         user_id = event.source.user_id  # ユーザーのIDを取得
         display_name = line_bot_api.get_profile(user_id).display_name  # ユーザーの表示名を取得
-        model = getGPTModel(event.source.user_id)
+        #model = getGPTModel(event.source.user_id)
+        model = "gpt-3.5-turbo"
         if event.message.text == "GPT-4を使用する":
             changeGPTModel(event.source.user_id)
             model = "gpt-4"
@@ -525,7 +526,7 @@ def handle_image(event):
     line_bot_api.push_message(user_id, TextSendMessage(text=corrected_text))
 
     # さらにGPTに渡して欠点を指摘
-    response = chatGPTResponseFromGPT(corrected_text)
+    response = ESAdviceGPT(corrected_text)
 
     # ユーザーに欠点を指摘
     line_bot_api.push_message(user_id, TextSendMessage(text=response))

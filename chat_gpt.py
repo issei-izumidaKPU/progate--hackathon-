@@ -45,7 +45,7 @@ def chatGPTResponseFromImages(prompt):
     text = response.choices[0].message['content'].strip()
     return text
 
-def chatGPTResponseFromGPT(prompt):
+def ESAdviceGPT(prompt):
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-16k-0613",
         messages=[
