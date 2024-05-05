@@ -98,5 +98,5 @@ class CloudStorageManager:
     def get_user_images(self, user_id):
         folder_path = f"{user_id}/images/"
         blobs = self.bucket.list_blobs(prefix=folder_path)
-        images = [blob.name for blob in blobs if blob.name.endswith(('.png', '.jpg', '.jpeg'))]
+        images = [blob.public_url for blob in blobs if blob.name.endswith(('.png', '.jpg', '.jpeg'))]
         return images

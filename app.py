@@ -21,7 +21,7 @@ from linebot.v3.messaging.rest import ApiException
 from apscheduler.schedulers.background import BackgroundScheduler
 from gcs_client import CloudStorageManager
 # from . import MicrophoneStream
-from datetime import datetime
+from datetime import datetime, timedelta
 import ocr as gcpapi
 from chat_gpt import chatGPTResponse, chatGPTResponseFromImages, ESAdviceGPT
 # from langchain.chains import OpenAIChain
@@ -274,7 +274,7 @@ def line_login():
                                     algorithms=['HS256'])
 
     # JWTの有効期限を1時間延長する
-    exp_time = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+    exp_time = datetime.utcnow() + timedelta(hours=1)
     decoded_id_token['exp'] = exp_time.timestamp()
 
     # 再度JWTをエンコード
@@ -416,8 +416,6 @@ def handle_message(event):
         show_loading_animation_request = linebot.v3.messaging.ShowLoadingAnimationRequest(
             chat_id=chat_id)
         api_instance.show_loading_animation(show_loading_animation_request)
-        '''
-        # ユーザーからのポストバックアクションを処理する
         if event.message.text == "ボタン":
             buttons_template = ButtonsTemplate(
                 title='あなたの選択', text='以下から選んでください', actions=[
@@ -429,7 +427,7 @@ def handle_message(event):
                 alt_text='Buttons alt text', template=buttons_template
             )
             line_bot_api.reply_message(event.reply_token, template_message)
-        '''
+            return  # メッセージ送信後に関数を終了する
         user_message = event.message.text  # ユーザーからのメッセージを取得
         user_id = event.source.user_id  # ユーザーのIDを取得
         display_name = line_bot_api.get_profile(user_id).display_name  # ユーザーの表示名を取得
