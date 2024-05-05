@@ -423,8 +423,8 @@ def handle_message(event):
         user_message = event.message.text  # ユーザーからのメッセージを取得
         user_id = event.source.user_id  # ユーザーのIDを取得
         display_name = line_bot_api.get_profile(user_id).display_name  # ユーザーの表示名を取得
-        #model = getGPTModel(event.source.user_id)
-        model = "gpt-3.5-turbo"
+        ensure_user_exists(user_id, display_name)
+        model = getGPTModel(event.source.user_id)
         if event.message.text == "GPT-4を使用する":
             changeGPTModel(event.source.user_id)
             model = "gpt-4"
