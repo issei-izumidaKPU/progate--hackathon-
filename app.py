@@ -140,8 +140,7 @@ def send_encouragement_message():
 
 # スケジューラの設定
 scheduler = BackgroundScheduler()
-scheduler.add_job(send_encouragement_message(), 'cron',
-                  hour=22, minute=10)  # 毎日22時10分に実行
+scheduler.add_job(send_encouragement_message, 'cron', hour=22, minute=10)
 scheduler.start()
 
 # データベースの更新->ユーザーの任意のタイミングで実行する

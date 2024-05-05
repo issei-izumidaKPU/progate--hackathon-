@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 from google.cloud import storage
 from google.oauth2 import service_account
 import os
+from gcs_client import CloudStorageManager
 
 class TestCloudStorageManager(unittest.TestCase):
     @patch('progate--hackathon-.gcs_client.storage.Client')
@@ -13,7 +14,7 @@ class TestCloudStorageManager(unittest.TestCase):
         mock_client.return_value.lookup_bucket.return_value = True  # バケットが存在すると仮定
 
         # CloudStorageManager インスタンスを作成
-        manager = CloudStorageManager('test-bucket')
+        manager = CloudStorageManager('test-bucket ')
 
         # test_connection メソッドを実行
         result = manager.test_connection()
