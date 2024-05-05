@@ -6,6 +6,7 @@ import json
 import openai
 import re
 import sys
+import re
 import sqlite3
 import base64
 from pathlib import Path
@@ -430,14 +431,10 @@ def handle_message(event):
         if event.message.text == "ボタン":
             buttons_template = ButtonsTemplate(
                 title='あなたの選択', text='以下から選んでください', actions=[
-                    PostbackAction(label='選択肢 1', data='action1'),
-                    PostbackAction(label='選択肢 2', data='action2')
+                    PostbackAction(label='gpt3.5を使用する', data='update:model,gpt3.5-turbo'),
+                    PostbackAction(label='gpt4を使用する', data='update:model,gpt4-turbo')
                 ]
             )
-            template_message = TemplateSendMessage(
-                alt_text='Buttons alt text', template=buttons_template
-            )
-            line_bot_api.reply_message(event.reply_token, template_message)
             return  # メッセージ送信後に関数を終了する
         user_message = event.message.text  # ユーザーからのメッセージを取得
         user_id = event.source.user_id  # ユーザーのIDを取得
