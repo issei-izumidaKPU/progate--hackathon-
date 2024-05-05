@@ -453,20 +453,12 @@ def handle_message(event):
             else:
                 line_bot_api.push_message(user_id, TextSendMessage(text="モデルの指定が不正です。"))
             return
-        if event.message.text == "他のモデルを使用する":
-            buttons_template = ButtonsTemplate(
-                title='あなたの選択', text='以下から選んでください', actions=[
-                    PostbackAction(label='gpt3.5を使用する', data='update:model,gpt3.5-turbo'),
-                    PostbackAction(label='gpt4を使用する', data='update:model,gpt4-turbo'),
-                    PostbackAction(label='Gemini1.0を使用する', data='update:model,gemini1.0-turbo')
-                ]
+        if "自己紹介文:" in user_message:
+            
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="自己紹介文が含まれています。")
             )
-            template_message = TemplateSendMessage(
-                alt_text='Buttons alt text', template=buttons_template)
-            line_bot_api.reply_message(event.reply_token, template_message)
-            return "ボタンを表示しました。"
-        user_message = event.message.text  # ユーザーからのメッセージを取得
-        user_id = event.source.user_id  # ユーザーのIDを取得
         display_name = line_bot_api.get_profile(user_id).display_name  # ユーザーの表示名を取得
         ensure_user_exists(user_id, display_name)
         model = getLLMModel(event.source.user_id)
