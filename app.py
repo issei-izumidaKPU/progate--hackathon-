@@ -435,7 +435,10 @@ def handle_message(event):
                     PostbackAction(label='gpt4を使用する', data='update:model,gpt4-turbo')
                 ]
             )
-            return  # メッセージ送信後に関数を終了する
+            template_message = TemplateSendMessage(
+                alt_text='Buttons alt text', template=buttons_template)
+            line_bot_api.reply_message(event.reply_token, template_message)
+            return "ボタンを表示しました。"
         user_message = event.message.text  # ユーザーからのメッセージを取得
         user_id = event.source.user_id  # ユーザーのIDを取得
         display_name = line_bot_api.get_profile(user_id).display_name  # ユーザーの表示名を取得
