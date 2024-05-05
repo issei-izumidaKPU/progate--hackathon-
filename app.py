@@ -344,16 +344,14 @@ def test_gcs_connection():
 @handler.add(FollowEvent)
 def handle_follow(event):
     user_id = event.source.user_id  # ユーザーのIDを取得
+    nickname = line_bot_api.get_profile(user_id).display_name  # ユーザーの表示名を取得
     gcs_user_manager.initialize_user_storage(user_id)  # ユーザーストレージを初期化
     display_name = line_bot_api.get_profile(user_id).display_name
     app.logger.info(f"ユーザーの表示名: {display_name}")
     # ユーザーのデータベースに新しいユーザーを追加
     new_user = User(
         user_id=user_id,
-        nickname="未設定",
-        age=0,
-        residence="未設定",
-        grade="未設定",
+        nickname=nickname,
         model="gpt-3.5-turbo"
     )
     db.session.add(new_user)

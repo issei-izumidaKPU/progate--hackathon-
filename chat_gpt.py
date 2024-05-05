@@ -18,6 +18,7 @@ def chatGPTResponse(prompts, model, user_id, system_prompts=system_prompts, temp
     )'''
     cloud_storage_manager = CloudStorageManager(bucket_name="user-backets")
     user_history = cloud_storage_manager.readChatHistory(user_id)
+    model = "gpt-4"
     response = openai.ChatCompletion.create(
         model=model,
         messages=[
