@@ -1,7 +1,6 @@
 from google.cloud import storage
 from google.oauth2 import service_account
 import os
-from PIL import Image
 
 class CloudStorageManager:
     def __init__(self, bucket_name):
@@ -95,14 +94,7 @@ class CloudStorageManager:
         history_lines = history_content.split('\n')
         last_five_conversations = '\n'.join(history_lines[-6:-1])  # 最後の5行を取得（-1は最後の空行を除外するため）
         return last_five_conversations
-    
-    def display_image(self, image_path):
-        """画像ファイルをダウンロードして表示する"""
-        blob = self.bucket.blob(image_path)
-        image_data = blob.download_as_bytes()
-        image = Image.open(io.BytesIO(image_data))
-        image.show()
-    
+
     def get_user_images(self, user_id):
         folder_path = f"{user_id}/images/"
         blobs = self.bucket.list_blobs(prefix=folder_path)

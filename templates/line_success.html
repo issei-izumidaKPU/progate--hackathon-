@@ -75,6 +75,11 @@
         <div class="images-container" id="uploaded-images-container">
             <!-- ここにJavaScriptで取得した画像を表示する -->
         </div>
+        <div class="images-container" id="uploaded-images-container">
+            {% for image_url in image_urls %}
+                <img src="{{ image_url }}" alt="Uploaded Image">
+            {% endfor %}
+        </div>
         <div class="link-box">
             <a href="transcribe.html">面接練習はこちら</a>
         </div>

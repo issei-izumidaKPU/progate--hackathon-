@@ -273,8 +273,10 @@ def line_login():
                                     audience=LINE_CHANNEL_ID,
                                     issuer='https://access.line.me',
                                     algorithms=['HS256'])
-
-    return render_template("line_success.html", user_profile=decoded_id_token)
+    gcs_client = CloudStorageManager("user-backets")
+    user_id = decoded_id_token["sub"]
+    image_urls = gcs_client.get_user_images(user_id)
+    return render_template("line_success.html", image_urls=image_urls, user_id=user_id)
 
 
 @app.route("/transcribe")
