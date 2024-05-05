@@ -440,6 +440,7 @@ def handle_message(event):
         res = f"あなたのユーザーIDは{user_id}です。\n"
         res += f"{display_name}さん、こんにちは！\n"
         res += f"現在のモデルは{model}です。\n"
+        res +=f"SQLから取得したモデルは{getGPTModel(event.source.user_id)}です。\n"
         res += GPTresponse
         gcs_client.writeChatHistory(user_id, "system", GPTresponse)
         # LINEユーザーにレスポンスを返信
@@ -535,5 +536,5 @@ def handle_image(event):
     gcs_client = CloudStorageManager("user-backets")
     gcs_client.ensure_user_storage(user_id)
     gcs_client.upload_file(
-        f"{user_id}/images/{message_id}.txt", image, content_type='image/jpeg')
+        f"{user_id}/images/{message_id}.jpg", image, content_type='image/jpeg')
     gcs_client.writeChatHistory(user_id, "asssytant", corrected_text)
