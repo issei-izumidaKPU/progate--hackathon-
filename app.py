@@ -274,9 +274,8 @@ def line_login():
                                     issuer='https://access.line.me',
                                     algorithms=['HS256'])
     gcs_client = CloudStorageManager("user-backets")
-    user_id = decoded_id_token["sub"]
-    image_urls = gcs_client.get_user_images(user_id)
-    return render_template("line_success.html", image_urls=image_urls, user_id=user_id)
+    image_urls = gcs_client.get_user_images(decoded_id_token["sub"])
+    return render_template("line_success.html", image_urls=image_urls,user_profile=decoded_id_token)
 
 
 @app.route("/transcribe")
@@ -434,6 +433,7 @@ def handle_message(event):
                 event.reply_token,
                 TextSendMessage(text="GPT-4を使用して返信します")  # 正しいレスポンスの取得方法
             )
+            return
         gcs_client = CloudStorageManager("user-backets")
         gcs_client.ensure_user_storage(user_id)
         gcs_client.writeChatHistory(user_id, "user", user_message)
