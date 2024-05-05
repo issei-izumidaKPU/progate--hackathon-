@@ -12,7 +12,7 @@ from pathlib import Path
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
-from flask import Flask, request, abort, render_template,send_from_directory
+from flask import Flask, request, abort, render_template, send_from_directory
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import MessageEvent, TextMessage, ButtonsTemplate,  TemplateSendMessage, PostbackAction, TextSendMessage, ImageMessage, AudioMessage, FollowEvent, ImageSendMessage, PostbackEvent
@@ -24,13 +24,13 @@ from gcs_client import CloudStorageManager
 from datetime import datetime
 import ocr as gcpapi
 from chat_gpt import chatGPTResponse, chatGPTResponseFromImages, chatGPTResponseFromGPT
-#from langchain.chains import OpenAIChain
-#from langchain.schema import Function
+# from langchain.chains import OpenAIChain
+# from langchain.schema import Function
 
-##初期設定##
+## 初期設定##
 load_dotenv()
 # OpenAIのモデルを使う設定
-#lchain = OpenAIChain()
+# lchain = OpenAIChain()
 # APIクライアントの設定
 configuration = linebot.v3.messaging.Configuration(
     access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
@@ -38,6 +38,8 @@ configuration = linebot.v3.messaging.Configuration(
 api_client = linebot.v3.messaging.ApiClient(configuration)
 
 db = SQLAlchemy()
+
+
 class User(db.Model):
     __tablename__ = 'users'
     user_id = db.Column(db.String(255), primary_key=True)
@@ -70,17 +72,19 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 openai.api_key = OPENAI_API_KEY
 gcs_user_manager = CloudStorageManager("user-backets")
-#user_status = "INITIAL"
-##SQLite3データベース設定##
-def ensure_user_exists(user_id,nickname):
+# user_status = "INITIAL"
+## SQLite3データベース設定##
+
+
+def ensure_user_exists(user_id, nickname):
     # データベースに接続
     conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cursor()
-    
+
     # ユーザーが存在するか確認
     cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
     user = cursor.fetchone()
-    
+
     if user is None:
         # ユーザーが存在しない場合、新しいユーザーを作成
         cursor.execute("""
@@ -88,13 +92,14 @@ def ensure_user_exists(user_id,nickname):
             VALUES (?, ?, ?, ?, ? )
         """, (user_id, "", "gpt3.5-turbo", datetime.now(), datetime.now()))
         conn.commit()
-    
+
     conn.close()
+
 
 def sqlite_update(USER_ID, NICKNAME, MODEL):
     conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cusor()
-    
+
     user_id = USER_ID
     nickname = NICKNAME
     model = MODEL
@@ -105,11 +110,12 @@ def sqlite_update(USER_ID, NICKNAME, MODEL):
             model = ?
         WHERE user_id = ?
     """
-    
-    cursor.execute(update_query, (nickname, model,user_id))
+
+    cursor.execute(update_query, (nickname, model, user_id))
     conn.commit()
     conn.close()
-    
+
+
 def get_user_ids():
     # SQLite3データベースに接続
     conn = sqlite3.connect('instance/db.sqlite3')
@@ -121,11 +127,11 @@ def get_user_ids():
             SELECT user_id
             FROM users
         """
-        
+
         # SQLクエリを実行し、結果を取得
         cursor.execute(select_query)
         user_ids = [row[0] for row in cursor.fetchall()]  # ユーザーIDの一覧を取得
-        
+
         return user_ids
 
     finally:
@@ -133,10 +139,13 @@ def get_user_ids():
         conn.close()
 
 # メッセージの送信
+
+
 def send_encouragement_message():
-    for user_id in get_user_ids():# ユーザーIDのリストを取得して要素毎にメッセージを送信
+    for user_id in get_user_ids():  # ユーザーIDのリストを取得して要素毎にメッセージを送信
         message = "おはようございます！新しい一日がんばりましょう！"  # 送るメッセージ
         line_bot_api.push_message(user_id, TextSendMessage(text=message))
+
 
 # スケジューラの設定
 scheduler = BackgroundScheduler()
@@ -144,14 +153,16 @@ scheduler.add_job(send_encouragement_message, 'cron', hour=22, minute=10)
 scheduler.start()
 
 # データベースの更新->ユーザーの任意のタイミングで実行する
+
+
 def sqlite_update(USER_ID, NICKNAME, MODEL):
     conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cursor()
-    
+
     user_id = USER_ID
     nickname = NICKNAME
     model = MODEL
-    
+
     # SQLインジェクション対策
     update_query = """
         UPDATE users
@@ -159,15 +170,16 @@ def sqlite_update(USER_ID, NICKNAME, MODEL):
             model = ?
         WHERE user_id = ?
     """
-    
-    cursor.execute(update_query, (nickname,model, user_id))
+
+    cursor.execute(update_query, (nickname, model, user_id))
     conn.commit()
     conn.close()
+
 
 def changeGPTModel(USER_ID):
     conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cursor()
-    
+
     user_id = USER_ID
     model = "gpt-4"
     update_query = """
@@ -175,28 +187,31 @@ def changeGPTModel(USER_ID):
         SET model = ?
         WHERE user_id = ?
     """
-    
+
     cursor.execute(update_query, (model, user_id))
     conn.commit()
     conn.close()
 
+
 def getGPTModel(USER_ID):
     conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cursor()
-    
+
     user_id = USER_ID
     select_query = """
         SELECT model
         FROM users
         WHERE user_id = ?
     """
-    
+
     cursor.execute(select_query, (user_id,))
     model = cursor.fetchone()
     conn.close()
     return model
 
-#user_idを集めたリストを取得
+# user_idを集めたリストを取得
+
+
 def get_user_ids():
     # SQLite3データベースに接続
     conn = sqlite3.connect('instance/db.sqlite3')
@@ -208,11 +223,11 @@ def get_user_ids():
             SELECT user_id
             FROM users
         """
-        
+
         # SQLクエリを実行し、結果を取得
         cursor.execute(select_query)
         user_ids = [row[0] for row in cursor.fetchall()]  # ユーザーIDの一覧を取得
-        
+
         return user_ids
 
     finally:
@@ -254,10 +269,10 @@ def line_login():
 
     # ペイロード部分をデコードすることで、ユーザ情報を取得する
     decoded_id_token = pyjwt.decode(line_id_token,
-                                  LINE_LOGIN_CHANNEL_SECRET,
-                                  audience=LINE_CHANNEL_ID,
-                                  issuer='https://access.line.me',
-                                  algorithms=['HS256'])
+                                    LINE_LOGIN_CHANNEL_SECRET,
+                                    audience=LINE_CHANNEL_ID,
+                                    issuer='https://access.line.me',
+                                    algorithms=['HS256'])
 
     return render_template("line_success.html", user_profile=decoded_id_token)
 
@@ -267,19 +282,24 @@ def line_login():
 def transcribe():
     return render_template("transcribe.html")
 
+
 @app.route("/audio")
 def audio():
     return render_template("audio.html")
+
 
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', )
 
 # データベース接続を設定
+
+
 def get_db_connection():
     conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
     return conn
+
 
 @app.route('/audio_file_upload/<user_id>', methods=['POST'])  # エンドポイントを修正
 def upload_audio():
@@ -294,10 +314,12 @@ def upload_audio():
 
     return '音声データを保存しました。', 200
 
-@app.route("/get_uimages/<user_id>",methods=["GET"])
+
+@app.route("/get_uimages/<user_id>", methods=["GET"])
 def get_user_images(user_id):
-    gcs_client = CloudStorageManager("user-backets") 
+    gcs_client = CloudStorageManager("user-backets")
     return gcs_client.get_user_images(user_id)
+
 
 @app.route("/callback", methods=["POST"])
 def callback():
@@ -331,7 +353,7 @@ def handle_follow(event):
         age=0,
         residence="未設定",
         grade="未設定",
-        model = "gpt-3.5-turbo"
+        model="gpt-3.5-turbo"
     )
     db.session.add(new_user)
     db.session.commit()
@@ -398,24 +420,27 @@ def handle_message(event):
             )
             line_bot_api.reply_message(event.reply_token, template_message)
         '''
-        
+        user_message = event.message.text  # ユーザーからのメッセージを取得
+        user_id = event.source.user_id  # ユーザーのIDを取得
+        display_name = line_bot_api.get_profile(user_id).display_name  # ユーザーの表示名を取得
         model = getGPTModel(event.source.user_id)
         if event.message.text == "GPT-4を使用する":
             changeGPTModel(event.source.user_id)
             model = "gpt-4"
-        user_message = event.message.text  # ユーザーからのメッセージを取得
-        user_id = event.source.user_id  # ユーザーのIDを取得
-        display_name = line_bot_api.get_profile(
-            user_id).display_name  # ユーザーの表示名を取得
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="GPT-4を使用して返信します")  # 正しいレスポンスの取得方法
+            )
         gcs_client = CloudStorageManager("user-backets")
         gcs_client.ensure_user_storage(user_id)
         gcs_client.writeChatHistory(user_id, "user", user_message)
         # ユーザーのメッセージを使用してレスポンスを生成
-        response = chatGPTResponse(user_message, model, user_id)
+        GPTresponse = chatGPTResponse(user_message, model, user_id)
         res = f"あなたのユーザーIDは{user_id}です。\n"
-        res = f"{display_name}さん、こんにちは！\n"
-        res += response
-        gcs_client.writeChatHistory(user_id, "system", response)
+        res += f"{display_name}さん、こんにちは！\n"
+        res += f"現在のモデルは{model}です。\n"
+        res += GPTresponse
+        gcs_client.writeChatHistory(user_id, "system", GPTresponse)
         # LINEユーザーにレスポンスを返信
         line_bot_api.reply_message(
             event.reply_token,
@@ -498,10 +523,10 @@ def handle_image(event):
 
     # ユーザーに修正されたテキストを送信
     line_bot_api.push_message(user_id, TextSendMessage(text=corrected_text))
-    
+
     # さらにGPTに渡して欠点を指摘
     response = chatGPTResponseFromGPT(corrected_text)
-    
+
     # ユーザーに欠点を指摘
     line_bot_api.push_message(user_id, TextSendMessage(text=response))
 
