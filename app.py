@@ -437,6 +437,8 @@ def handle_message(event):
         show_loading_animation_request = linebot.v3.messaging.ShowLoadingAnimationRequest(
             chat_id=chat_id)
         api_instance.show_loading_animation(show_loading_animation_request)
+        user_message = event.message.text  # ユーザーからのメッセージを取得
+        user_id = event.source.user_id  # ユーザーのIDを取得
         if event.message.text == "他のモデルを使用する":
             line_bot_api.push_message(user_id, TextSendMessage(text="変更先のモデルを指定して下さい"))
             if event.message.text == "gpt3.5":
