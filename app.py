@@ -429,11 +429,7 @@ def handle_message(event):
         if event.message.text == "GPT-4を使用する":
             changeGPTModel(event.source.user_id)
             model = "gpt-4"
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="GPT-4を使用して返信します")  # 正しいレスポンスの取得方法
-            )
-            return
+            line_bot_api.push_message(user_id, TextSendMessage(text="GPT-4を使用します。"))
         gcs_client = CloudStorageManager("user-backets")
         gcs_client.ensure_user_storage(user_id)
         gcs_client.writeChatHistory(user_id, "user", user_message)

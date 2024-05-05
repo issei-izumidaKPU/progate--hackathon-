@@ -62,7 +62,7 @@
         <div>MyPage</div>
         <div>teamブタ - {{ user_profile["name"] }}</div>
     </header>
-    <div class="container">
+    <div class="container"> 
         <h1>My Page</h1>
         <h2>就活に役立つ情報はこちら</h2>
         <div class="images-container">
@@ -75,7 +75,7 @@
         <div class="images-container" id="uploaded-images-container">
             <!-- ここにJavaScriptで取得した画像を表示する -->
         </div>
-        <div class="images-container" id="uploaded-images-container">
+        <div class="images-container" id="dynamic-uploaded-images-container">
             {% for image_url in image_urls %}
                 <img src="{{ image_url }}" alt="Uploaded Image">
             {% endfor %}
@@ -122,7 +122,7 @@
         }
 
         function displayImages(imageUrls) {
-            const imagesContainer = document.getElementById('uploaded-images-container');
+            const imagesContainer = document.getElementById('dynamic-uploaded-images-container');
             imageUrls.forEach(imageUrl => {
                 const img = document.createElement('img');
                 img.src = imageUrl;
