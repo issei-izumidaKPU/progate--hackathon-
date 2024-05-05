@@ -12,7 +12,7 @@ from pathlib import Path
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
-from flask import Flask, request, abort, render_template, send_from_directory
+from flask import Flask, request, abort, render_template, send_from_directory,redirect, url_for
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import MessageEvent, TextMessage, ButtonsTemplate,  TemplateSendMessage, PostbackAction, TextSendMessage, ImageMessage, AudioMessage, FollowEvent, ImageSendMessage, PostbackEvent
@@ -249,8 +249,12 @@ def line_login():
     LINE_CHANNEL_ID = os.getenv("LINE_CHANNEL_ID")
     REDIRECT_URL = os.getenv("REDIRECT_URL")
     LINE_LOGIN_CHANNEL_SECRET = os.getenv("LINE_LOGIN_CHANNEL_SECRET")
-    # 認可コードを取得する
-    request_code = request.args["code"]
+    request_code = request.args.get("code", None)
+
+    if not request_code:
+        # 認可コードがURLに含まれていない場合
+        return redirect(url_for('index', error="認可コードが提供されていません。"))
+
     uri_access_token = "https://api.line.me/oauth2/v2.1/token"
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data_params = {
@@ -262,9 +266,16 @@ def line_login():
     }
 
     # トークンを取得するためにリクエストを送る
-    response_post = requests.post(
-        uri_access_token, headers=headers, data=data_params)
-    line_id_token = json.loads(response_post.text)["id_token"]
+    response_post = requests.post(uri_access_token, headers=headers, data=data_params)
+    response_data = json.loads(response_post.text)
+
+    if "id_token" not in response_data:
+        # id_tokenが応答に含まれていない場合
+        error_message = response_data.get("error_description", "認可コードに問題があります。")
+        print(f"Error fetching ID token: {error_message}")  # エラーをログに記録
+        return redirect(url_for('index', error=error_message))
+
+    line_id_token = response_data["id_token"]
 
     # ペイロード部分をデコードすることで、ユーザ情報を取得する
     decoded_id_token = pyjwt.decode(line_id_token,
