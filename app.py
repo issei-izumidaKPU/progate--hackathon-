@@ -169,7 +169,7 @@ def changeGPTModel(USER_ID):
     cursor = conn.cursor()
     
     user_id = USER_ID
-    model = "gpt-4-turbo"
+    model = "gpt-4"
     update_query = """
         UPDATE users
         SET model = ?
@@ -296,7 +296,7 @@ def upload_audio():
 
 @app.route("/get_uimages/<user_id>",methods=["GET"])
 def get_user_images(user_id):
-    gcs_client = CloudStorageManager("user-images") 
+    gcs_client = CloudStorageManager("user-backets") 
     return gcs_client.get_user_images(user_id)
 
 @app.route("/callback", methods=["POST"])
@@ -402,7 +402,7 @@ def handle_message(event):
         model = getGPTModel(event.source.user_id)
         if event.message.text == "GPT-4を使用する":
             changeGPTModel(event.source.user_id)
-            model = "gpt-4-turbo"
+            model = "gpt-4"
         user_message = event.message.text  # ユーザーからのメッセージを取得
         user_id = event.source.user_id  # ユーザーのIDを取得
         display_name = line_bot_api.get_profile(
