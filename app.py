@@ -51,7 +51,7 @@ class User(db.Model):
 
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__,static_folder='static')
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config["SECRET_KEY"] = "sample1216"
@@ -244,7 +244,6 @@ def index():
                            channel_id=LINE_CHANNEL_ID,
                            redirect_url=REDIRECT_URL)
 
-
 @app.route("/line/login", methods=["GET"])
 def line_login():
     LINE_CHANNEL_ID = os.getenv("LINE_CHANNEL_ID")
@@ -273,9 +272,21 @@ def line_login():
                                     audience=LINE_CHANNEL_ID,
                                     issuer='https://access.line.me',
                                     algorithms=['HS256'])
+
+    # JWTの有効期限を1時間延長する
+    exp_time = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+    decoded_id_token['exp'] = exp_time.timestamp()
+
+    # 再度JWTをエンコード
+    new_line_id_token = pyjwt.encode(decoded_id_token, LINE_LOGIN_CHANNEL_SECRET, algorithm='HS256')
+
     gcs_client = CloudStorageManager("user-backets")
     image_urls = gcs_client.get_user_images(decoded_id_token["sub"])
     return render_template("line_success.html", image_urls=image_urls,user_profile=decoded_id_token)
+
+@app.route('/images/<path:filename>')
+def custom_static(filename):
+    return send_from_directory(app.static_folder, filename)
 
 
 @app.route("/transcribe")
