@@ -96,7 +96,8 @@ class CloudStorageManager:
         return last_five_conversations
     
     def get_user_images(self, user_id):
-        folder_path = f"{user_id}/images/"
-        blobs = self.bucket.list_blobs(prefix=folder_path)
-        images = [blob.name for blob in blobs if blob.name.endswith(('.png', '.jpg', '.jpeg'))]
-        return images
+        client = self.client
+        bucket = client.bucket(self.bucket.name)
+        user_images_folder = f"{user_id}/images/"
+        blobs = list(bucket.list_blobs(prefix=user_images_folder))
+        print(blobs)

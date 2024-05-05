@@ -7,6 +7,7 @@ import openai
 import re
 import sys
 import sqlite3
+import base64
 from pathlib import Path
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
@@ -44,6 +45,7 @@ class User(db.Model):
     age = db.Column(db.Integer, nullable=False)
     residence = db.Column(db.String(255), nullable=False)
     grade = db.Column(db.String(255), nullable=False)
+    model = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(
         db.DateTime, default=datetime.now, onupdate=datetime.now)
@@ -170,13 +172,46 @@ def sqlite_update(USER_ID, NICKNAME, AGE, RESIDENCE, GRADE):
             age = ?,
             residence = ?,
             grade = ?
+            model = ?
         WHERE user_id = ?
     """
     
     cursor.execute(update_query, (nickname, age, residence, grade, user_id))
     conn.commit()
     conn.close()
+
+def changeGPTModel(USER_ID):
+    conn = sqlite3.connect('instance/db.sqlite3')
+    cursor = conn.cursor()
     
+    user_id = USER_ID
+    model = "gpt-4-turbo"
+    update_query = """
+        UPDATE users
+        SET model = ?
+        WHERE user_id = ?
+    """
+    
+    cursor.execute(update_query, (model, user_id))
+    conn.commit()
+    conn.close()
+
+def getGPTModel(USER_ID):
+    conn = sqlite3.connect('instance/db.sqlite3')
+    cursor = conn.cursor()
+    
+    user_id = USER_ID
+    select_query = """
+        SELECT model
+        FROM users
+        WHERE user_id = ?
+    """
+    
+    cursor.execute(select_query, (user_id,))
+    model = cursor.fetchone()
+    conn.close()
+    return model
+
 #user_idを集めたリストを取得
 def get_user_ids():
     # SQLite3データベースに接続
@@ -262,21 +297,18 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.route('/audio_file_upload/', methods=['POST'])
+@app.route('/audio_file_upload/<user_id>', methods=['POST'])  # エンドポイントを修正
 def upload_audio():
     data_uri = request.form['record']
-    # Data URIからバイナリデータを抽出
     header, encoded = data_uri.split(",", 1)
     data = base64.b64decode(encoded)
 
-    # GCSにファイルをアップロード
-    user_id = 'default_user'  # 本来はユーザー認証から取得するユーザーIDを使用
+    user_id = 'default_user'
     file_path = f"{user_id}/{datetime.now().strftime('%Y%m%d%H%M%S')}.wav"
     gcs_client = CloudStorageManager("user-audio")
     gcs_client.upload_file(file_path, data, content_type='audio/wav')
 
     return '音声データを保存しました。', 200
-
 
 @app.route("/get_uimages/<user_id>",methods=["GET"])
 def get_user_images(user_id):
@@ -315,6 +347,7 @@ def handle_follow(event):
         age=0,
         residence="未設定",
         grade="未設定",
+        model = "gpt-3.5-turbo"
     )
     db.session.add(new_user)
     db.session.commit()
@@ -381,8 +414,9 @@ def handle_message(event):
                 alt_text='Buttons alt text', template=buttons_template
             )
             line_bot_api.reply_message(event.reply_token, template_message)
-        model = "gpt-3.5-turbo"
+        model = getGPTModel(event.source.user_id)
         if event.message.text == "GPT-4を使用する":
+            changeGPTModel(event.source.user_id)
             model = "gpt-4-turbo"
         user_message = event.message.text  # ユーザーからのメッセージを取得
         user_id = event.source.user_id  # ユーザーのIDを取得
